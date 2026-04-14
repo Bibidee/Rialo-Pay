@@ -9,44 +9,38 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
-// Normalize ethers namespace — some UMD builds nest it
-if (typeof ethers !== 'undefined' && ethers.ethers) {
-  window.ethers = ethers.ethers;
-}
+if (typeof ethers !== 'undefined' && ethers.ethers) window.ethers = ethers.ethers;
 </script>
 <style>
-/* ═══════════════════════════════════════════
-   TOKENS
-═══════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+/* ── THEME TOKENS ── */
 :root{
-  --bg:#EDEAE2;
-  --surface:#E4E0D7;
-  --card:#FAFAF7;
-  --card2:#F3F0EB;
-  --border:#D8D3C8;
-  --border2:#C8C2B5;
-  --ink:#141210;
-  --ink2:#3A3530;
-  --ink3:#7C766E;
-  --ink4:#B0AA9F;
-  --teal:#1B6B58;
-  --teal2:#0E4D3C;
-  --teal-dim:rgba(27,107,88,.09);
-  --teal-glow:rgba(27,107,88,.22);
-  --red:#991B1B;
-  --amber:#92400E;
-  --blue:#1D4ED8;
-  --ff-d:'Syne',sans-serif;
-  --ff-b:'DM Sans',sans-serif;
-  --ff-m:'DM Mono',monospace;
-  --r:10px;--r2:14px;--r3:20px;
+  --bg:#EDEAE2; --surface:#E4E0D7; --card:#FAFAF7; --card2:#F3F0EB;
+  --border:#D8D3C8; --border2:#C8C2B5;
+  --ink:#141210; --ink2:#3A3530; --ink3:#7C766E; --ink4:#B0AA9F;
+  --teal:#1B6B58; --teal2:#0E4D3C; --teal-dim:rgba(27,107,88,.09); --teal-glow:rgba(27,107,88,.22);
+  --red:#991B1B; --amber:#92400E; --blue:#1D4ED8;
+  --ff-d:'Syne',sans-serif; --ff-b:'DM Sans',sans-serif; --ff-m:'DM Mono',monospace;
+  --r:10px; --r2:14px; --r3:20px;
   --sh:0 1px 3px rgba(0,0,0,.05),0 3px 12px rgba(0,0,0,.06);
   --sh2:0 2px 8px rgba(0,0,0,.07),0 10px 36px rgba(0,0,0,.09);
+  --transition: .2s ease;
 }
+[data-theme="dark"]{
+  --bg:#0F0E0C; --surface:#1A1815; --card:#211F1C; --card2:#1E1C19;
+  --border:#2E2B26; --border2:#3A3630;
+  --ink:#F5F2EC; --ink2:#C8C2B8; --ink3:#8C857C; --ink4:#5A544E;
+  --teal:#2DD4AA; --teal2:#1FA882; --teal-dim:rgba(45,212,170,.08); --teal-glow:rgba(45,212,170,.18);
+  --red:#F87171; --amber:#FBB040; --blue:#60A5FA;
+  --sh:0 1px 3px rgba(0,0,0,.3),0 3px 12px rgba(0,0,0,.4);
+  --sh2:0 2px 8px rgba(0,0,0,.4),0 10px 36px rgba(0,0,0,.5);
+}
+
 html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:100vh;overflow-x:hidden}
+body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:100vh;overflow-x:hidden;transition:background var(--transition),color var(--transition)}
 ::selection{background:var(--teal-dim);color:var(--teal)}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
@@ -58,111 +52,45 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes popIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes receiptPop{0%{transform:scale(0) rotate(-10deg);opacity:0}60%{transform:scale(1.15) rotate(2deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes receiptSlideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
 
-/* ═══════════════════════════════════════════
-   PAGES  (full-screen swap)
-═══════════════════════════════════════════ */
+/* ═══ PAGES ═══ */
 .pg{display:none;min-height:100vh}
 .pg.on{display:flex;flex-direction:column}
 
-/* ════════════════════════════════════════════════════════
-   PAGE 1 — HOME / CONNECT
-════════════════════════════════════════════════════════ */
-#pg-home{
-  background:var(--bg);
-  align-items:center;justify-content:center;
-  position:relative;overflow:hidden;
-}
-/* background R watermark */
-#pg-home::before{
-  content:'R';
-  position:absolute;right:-4vw;bottom:-8vh;
-  font-family:var(--ff-d);font-weight:800;
-  font-size:clamp(280px,40vw,520px);
-  letter-spacing:-8px;line-height:1;
-  color:rgba(27,107,88,.05);
-  pointer-events:none;user-select:none;z-index:0;
-}
-.home-inner{
-  position:relative;z-index:1;
-  display:flex;flex-direction:column;
-  align-items:flex-start;
-  padding:0 10vw;
-  animation:fadeUp .5s cubic-bezier(.22,1,.36,1);
-  width:100%;max-width:900px;
-}
-.home-logo{
-  width:48px;height:48px;border-radius:12px;
-  background:var(--card);border:1px solid var(--border2);
-  display:flex;align-items:center;justify-content:center;
-  overflow:hidden;margin-bottom:24px;
-  box-shadow:var(--sh);
-}
-.home-logo img{width:36px;height:36px;object-fit:contain}
-.home-brand{
-  font-family:var(--ff-d);font-weight:800;
-  font-size:clamp(52px,9vw,96px);
-  letter-spacing:-3.5px;line-height:.92;
-  margin-bottom:16px;
-}
+/* ═══ HOME ═══ */
+#pg-home{background:var(--bg);align-items:center;justify-content:center;position:relative;overflow:hidden;}
+#pg-home::before{content:'R';position:absolute;right:-4vw;bottom:-8vh;font-family:var(--ff-d);font-weight:800;font-size:clamp(280px,40vw,520px);letter-spacing:-8px;line-height:1;color:rgba(27,107,88,.05);pointer-events:none;user-select:none;z-index:0;}
+.home-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-start;padding:0 10vw;animation:fadeUp .5s cubic-bezier(.22,1,.36,1);width:100%;max-width:900px;}
+.home-logo{width:52px;height:52px;border-radius:14px;background:var(--card);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:24px;box-shadow:var(--sh);}
+.home-logo img{width:38px;height:38px;object-fit:contain;mix-blend-mode:multiply}
+.home-brand{font-family:var(--ff-d);font-weight:800;font-size:clamp(52px,9vw,96px);letter-spacing:-3.5px;line-height:.92;margin-bottom:16px;}
 .home-brand span{color:var(--teal)}
-.home-tag{
-  font-size:clamp(14px,1.4vw,17px);
-  font-weight:300;color:var(--ink3);
-  letter-spacing:.01em;line-height:1.55;
-  max-width:300px;margin-bottom:44px;
-}
-/* home connect button */
-.home-btn{
-  display:inline-flex;align-items:center;gap:11px;
-  padding:13px 28px;border-radius:var(--r2);
-  background:var(--ink);color:#fff;
-  font-family:var(--ff-d);font-weight:700;font-size:13.5px;
-  cursor:pointer;border:none;transition:.2s;
-  box-shadow:0 2px 0 rgba(0,0,0,.4),0 6px 20px rgba(20,18,16,.16);
-  letter-spacing:-.2px;position:relative;overflow:hidden;
-}
+.home-tag{font-size:clamp(14px,1.4vw,17px);font-weight:300;color:var(--ink3);letter-spacing:.01em;line-height:1.55;max-width:300px;margin-bottom:44px;}
+.home-btn{display:inline-flex;align-items:center;gap:11px;padding:13px 28px;border-radius:var(--r2);background:var(--ink);color:var(--bg);font-family:var(--ff-d);font-weight:700;font-size:13.5px;cursor:pointer;border:none;transition:.2s;box-shadow:0 2px 0 rgba(0,0,0,.4),0 6px 20px rgba(20,18,16,.16);letter-spacing:-.2px;position:relative;overflow:hidden;}
 .home-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.08) 0%,transparent 60%);pointer-events:none}
 .home-btn:hover{background:var(--teal);box-shadow:0 2px 0 var(--teal2),0 6px 22px var(--teal-glow);transform:translateY(-1px)}
 .home-btn:active{transform:scale(.98)}
 .home-btn-arrow{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:11px}
-/* home footer */
-.home-footer{
-  position:absolute;bottom:0;left:0;right:0;
-  padding:16px 10vw;
-  border-top:1px solid var(--border);
-  display:flex;align-items:center;gap:20px;
-  background:rgba(237,234,226,.6);backdrop-filter:blur(8px);
-}
+.home-footer{position:absolute;bottom:0;left:0;right:0;padding:16px 10vw;border-top:1px solid var(--border);display:flex;align-items:center;gap:20px;background:rgba(237,234,226,.6);backdrop-filter:blur(8px);}
+[data-theme="dark"] .home-footer{background:rgba(15,14,12,.6)}
 .hf-item{font-family:var(--ff-m);font-size:10.5px;color:var(--ink4);display:flex;align-items:center;gap:5px}
 .hf-sep{width:1px;height:10px;background:var(--border2)}
-@media(max-width:500px){.home-footer{display:none}.home-inner{padding:0 24px}}
 
-/* ════════════════════════════════════════════════════════
-   APP SHELL  (pages 2+)
-════════════════════════════════════════════════════════ */
-#app-shell{flex:1;display:flex;flex-direction:column}
-
-/* ── top nav ── */
-#topnav{
-  height:54px;background:rgba(237,234,226,.92);
-  backdrop-filter:blur(24px);border-bottom:1px solid var(--border);
-  display:flex;align-items:center;padding:0 28px;gap:14px;
-  position:sticky;top:0;z-index:50;flex-shrink:0;
-}
+/* ═══ APP SHELL ═══ */
+#topnav{height:54px;background:rgba(237,234,226,.92);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;gap:14px;position:sticky;top:0;z-index:50;flex-shrink:0;transition:background var(--transition),border-color var(--transition);}
+[data-theme="dark"] #topnav{background:rgba(15,14,12,.92)}
 .tn-logo{display:flex;align-items:center;gap:9px;cursor:default}
 .tn-logo-box{width:28px;height:28px;border-radius:7px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden}
-.tn-logo-box img{width:20px;height:20px;object-fit:contain}
+.tn-logo-box img{width:20px;height:20px;object-fit:contain;mix-blend-mode:multiply}
 .tn-brand{font-family:var(--ff-d);font-weight:700;font-size:15px;letter-spacing:-.4px}
 .tn-brand span{color:var(--teal)}
 .tn-mid{flex:1;display:flex;align-items:center;justify-content:center}
-/* page tabs */
 .pg-tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:3px}
-.pg-tab{
-  padding:5px 16px;border-radius:7px;
-  font-family:var(--ff-m);font-size:11.5px;color:var(--ink3);
-  cursor:pointer;border:none;background:transparent;transition:.15s;
-}
+.pg-tab{padding:5px 16px;border-radius:7px;font-family:var(--ff-m);font-size:11.5px;color:var(--ink3);cursor:pointer;border:none;background:transparent;transition:.15s;}
 .pg-tab:hover{color:var(--ink)}
 .pg-tab.on{background:var(--card);color:var(--ink);box-shadow:var(--sh)}
 .tn-right{display:flex;align-items:center;gap:8px}
@@ -173,26 +101,20 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
 .wpart:hover{background:var(--surface)}
 .wdiv{width:1px;background:var(--border);align-self:stretch}
 .wpart.disc:hover{background:rgba(153,27,27,.07);color:var(--red)}
-@media(max-width:640px){.net-pill{display:none}.pg-tabs{gap:0}.pg-tab{padding:5px 11px;font-size:11px}}
-@media(max-width:420px){.tn-brand{display:none}}
 
-/* ── sub pages ── */
+/* Dark mode toggle */
+.dark-toggle{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--card);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:.15s;flex-shrink:0;}
+.dark-toggle:hover{background:var(--surface);border-color:var(--border2)}
+
 .sub-pg{display:none;flex:1;animation:fadeUp .3s cubic-bezier(.22,1,.36,1)}
 .sub-pg.on{display:block}
 
-/* ════════════════════════════════════════════════════════
-   PAGE 2 — PAYMENTS
-════════════════════════════════════════════════════════ */
+/* ═══ PAYMENTS PAGE ═══ */
 #pg-pay{padding:28px;max-width:1080px;margin:0 auto;width:100%}
 .pay-grid{display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:start}
 
 /* Balance card */
-.bal-card{
-  background:var(--teal);border-radius:20px;
-  padding:24px 24px 20px;
-  box-shadow:0 4px 0 var(--teal2),0 8px 28px var(--teal-glow);
-  position:relative;overflow:hidden;margin-bottom:14px;
-}
+.bal-card{background:var(--teal);border-radius:20px;padding:24px 24px 20px;box-shadow:0 4px 0 var(--teal2),0 8px 28px var(--teal-glow);position:relative;overflow:hidden;margin-bottom:14px;}
 .bal-card::before{content:'';position:absolute;top:-50px;right:-50px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none}
 .bal-card::after{content:'';position:absolute;bottom:-40px;left:-20px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none}
 .bc-label{font-family:var(--ff-m);font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:rgba(255,255,255,.5);margin-bottom:8px}
@@ -205,7 +127,29 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
 .bc-faucet{display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);font-family:var(--ff-m);font-size:11px;color:rgba(255,255,255,.72);cursor:pointer;transition:.15s}
 .bc-faucet:hover{background:rgba(255,255,255,.2)}
 
-/* Send form card */
+/* Monthly summary card */
+.monthly-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px;box-shadow:var(--sh);margin-bottom:14px;}
+.mc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.mc-title{font-family:var(--ff-d);font-size:12px;font-weight:700;letter-spacing:-.2px}
+.mc-month{font-family:var(--ff-m);font-size:10px;color:var(--ink4)}
+.mc-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.mc-stat{background:var(--surface);border-radius:var(--r);padding:10px 12px}
+.mc-stat-label{font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);margin-bottom:4px}
+.mc-stat-val{font-family:var(--ff-d);font-size:16px;font-weight:700;letter-spacing:-.5px}
+.mc-stat-val.green{color:var(--teal)}
+.mc-stat-val.red{color:var(--red)}
+/* Spending bar */
+.mc-bar-label{font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);margin-bottom:8px}
+.mc-bar-track{height:6px;background:var(--surface);border-radius:999px;overflow:hidden;margin-bottom:10px}
+.mc-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--teal),var(--teal2));transition:width .6s cubic-bezier(.22,1,.36,1)}
+/* Category breakdown */
+.mc-cats{display:flex;flex-direction:column;gap:5px}
+.mc-cat-row{display:flex;align-items:center;gap:8px}
+.mc-cat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.mc-cat-name{font-family:var(--ff-m);font-size:10px;color:var(--ink3);flex:1}
+.mc-cat-amt{font-family:var(--ff-m);font-size:10px;color:var(--ink2);font-weight:500}
+
+/* Send form */
 .form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);box-shadow:var(--sh);overflow:hidden}
 .fc-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .fc-title{font-family:var(--ff-d);font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px}
@@ -228,6 +172,31 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
 .qa{flex:1;padding:6px;border-radius:8px;border:1px solid var(--border);background:transparent;font-family:var(--ff-m);font-size:11px;color:var(--ink3);cursor:pointer;text-align:center;transition:.15s}
 .qa:hover,.qa.on{background:var(--teal-dim);border-color:rgba(27,107,88,.3);color:var(--teal)}
 
+/* Category selector */
+.cat-grid{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.cat-chip{padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-family:var(--ff-m);font-size:10px;color:var(--ink3);cursor:pointer;transition:.15s;display:flex;align-items:center;gap:4px}
+.cat-chip:hover,.cat-chip.on{border-color:rgba(27,107,88,.35);background:var(--teal-dim);color:var(--teal)}
+
+/* Trust badge */
+.trust-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-family:var(--ff-m);font-size:10px;margin-top:4px}
+.trust-trusted{background:rgba(27,107,88,.1);color:var(--teal);border:1px solid rgba(27,107,88,.2)}
+.trust-unknown{background:rgba(146,64,14,.08);color:var(--amber);border:1px solid rgba(146,64,14,.2)}
+.trust-flagged{background:rgba(153,27,27,.08);color:var(--red);border:1px solid rgba(153,27,27,.2)}
+
+/* Simulation box */
+.sim-box{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:13px;animation:slideDown .2s ease;display:none}
+.sim-box.show{display:block}
+.sim-title{font-family:var(--ff-m);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);margin-bottom:10px}
+.sim-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.sim-label{font-family:var(--ff-m);font-size:11px;color:var(--ink3)}
+.sim-val{font-family:var(--ff-m);font-size:11px;color:var(--ink);font-weight:500}
+.sim-val.warn{color:var(--amber)}
+.sim-val.ok{color:var(--teal)}
+.sim-divider{height:1px;background:var(--border);margin:8px 0}
+.sim-result{display:flex;justify-content:space-between;align-items:center}
+.sim-result-label{font-family:var(--ff-d);font-size:12px;font-weight:700}
+.sim-result-val{font-family:var(--ff-d);font-size:13px;font-weight:700;color:var(--teal)}
+
 /* Buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 20px;border-radius:var(--r);font-family:var(--ff-d);font-weight:700;font-size:13px;cursor:pointer;transition:.18s;border:none;outline:none}
 .btn:active{transform:scale(.97)}
@@ -239,8 +208,10 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
 .btn-ghost:hover{background:var(--surface);border-color:var(--border2)}
 .btn-w{width:100%;justify-content:center}
 .btn-sm{padding:6px 13px;font-size:12px;border-radius:8px}
+.btn-danger{background:rgba(153,27,27,.08);color:var(--red);border:1px solid rgba(153,27,27,.2)}
+.btn-danger:hover{background:rgba(153,27,27,.14)}
 
-/* Contact picker */
+/* Contacts */
 .contact-list{display:flex;flex-direction:column;gap:5px;max-height:160px;overflow-y:auto;margin-bottom:11px}
 .c-row{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:var(--r);border:1px solid var(--border);cursor:pointer;transition:.15s;background:var(--card2)}
 .c-row:hover,.c-row.picked{background:var(--teal-dim);border-color:rgba(27,107,88,.25)}
@@ -249,14 +220,13 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
 .c-info{flex:1;min-width:0}
 .c-name{font-size:13px;font-weight:500;color:var(--ink)}
 .c-addr{font-family:var(--ff-m);font-size:10px;color:var(--ink4);margin-top:1px}
-.c-last{font-family:var(--ff-m);font-size:10px;color:var(--teal);white-space:nowrap}
 .add-c{display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:var(--r);border:1px dashed var(--border2);cursor:pointer;transition:.15s;color:var(--ink4);font-size:12.5px}
 .add-c:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-dim)}
 .or-div{display:flex;align-items:center;gap:10px;margin:12px 0}
 .or-div::before,.or-div::after{content:'';flex:1;height:1px;background:var(--border)}
 .or-text{font-family:var(--ff-m);font-size:10px;color:var(--ink4);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
 
-/* Right panel tabs */
+/* Right panel */
 .right-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--card2);border-radius:var(--r2) var(--r2) 0 0}
 .r-tab{flex:1;padding:12px 8px;font-family:var(--ff-m);font-size:11.5px;color:var(--ink4);cursor:pointer;border:none;background:transparent;transition:.15s;border-bottom:2px solid transparent;margin-bottom:-1px;text-align:center}
 .r-tab:hover{color:var(--ink2)}
@@ -273,7 +243,20 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
 .qr-center{display:flex;justify-content:center;padding:6px 0}
 #qr-el{border-radius:10px;padding:12px;background:#fff;border:1px solid var(--border);box-shadow:var(--sh)}
 
-/* Request / Invoice */
+/* Split bill tab */
+.split-recipients{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.split-recipient-row{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surface);border-radius:var(--r);border:1px solid var(--border)}
+.split-r-info{flex:1;min-width:0}
+.split-r-name{font-size:12.5px;font-weight:500}
+.split-r-addr{font-family:var(--ff-m);font-size:10px;color:var(--ink4)}
+.split-r-amt{font-family:var(--ff-d);font-size:14px;font-weight:700;color:var(--teal);white-space:nowrap}
+.split-r-remove{color:var(--ink4);cursor:pointer;font-size:12px;padding:2px 5px;border-radius:4px;transition:.15s;border:none;background:none}
+.split-r-remove:hover{color:var(--red)}
+.split-summary{background:var(--teal-dim);border:1px solid rgba(27,107,88,.2);border-radius:var(--r);padding:10px 13px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.split-sum-label{font-family:var(--ff-m);font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:.08em}
+.split-sum-val{font-family:var(--ff-d);font-size:15px;font-weight:700;color:var(--teal)}
+
+/* Request */
 .req-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pay-link{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:11px 13px;margin-top:10px;font-family:var(--ff-m);font-size:11px;color:var(--teal);word-break:break-all;cursor:pointer;transition:.15s;display:none;line-height:1.55}
 .pay-link.show{display:block}
@@ -285,13 +268,28 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
 .rec-freq{padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--card2);font-family:var(--ff-m);font-size:11px;color:var(--ink3);cursor:pointer;text-align:center;transition:.15s}
 .rec-freq:hover,.rec-freq.on{background:var(--teal-dim);border-color:rgba(27,107,88,.3);color:var(--teal)}
 
-/* ════════════════════════════════════════════════════════
-   PAGE 3 — HISTORY
-════════════════════════════════════════════════════════ */
+/* ═══ HISTORY PAGE ═══ */
 #pg-history{padding:28px;max-width:1080px;margin:0 auto;width:100%}
 .hist-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
 .hist-title{font-family:var(--ff-d);font-size:20px;font-weight:700;letter-spacing:-.4px}
 .hist-actions{display:flex;align-items:center;gap:8px}
+
+/* Chart */
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:20px 24px;box-shadow:var(--sh);margin-bottom:20px}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.chart-title{font-family:var(--ff-d);font-size:14px;font-weight:700;letter-spacing:-.3px}
+.chart-legend{display:flex;align-items:center;gap:14px}
+.chart-leg-item{display:flex;align-items:center;gap:5px;font-family:var(--ff-m);font-size:10px;color:var(--ink4)}
+.chart-leg-dot{width:8px;height:8px;border-radius:50%}
+.chart-wrap{position:relative;height:140px;width:100%}
+canvas#balance-chart{width:100%!important;height:140px!important}
+.chart-empty{height:140px;display:flex;align-items:center;justify-content:center;font-family:var(--ff-m);font-size:12px;color:var(--ink4)}
+
+/* Category filter row */
+.cat-filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.cat-filter{padding:4px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);font-family:var(--ff-m);font-size:10.5px;color:var(--ink3);cursor:pointer;transition:.15px;display:flex;align-items:center;gap:4px}
+.cat-filter:hover{border-color:var(--border2)}
+.cat-filter.on{background:var(--teal-dim);border-color:rgba(27,107,88,.3);color:var(--teal)}
 
 /* Summary strip */
 .hist-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
@@ -303,16 +301,16 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
 .hs-val.red{color:var(--red)}
 
 /* Filters */
-.hist-filters{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.hist-filters{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .hf-group{display:flex;gap:4px}
 .hf{padding:5px 13px;border-radius:999px;border:1px solid var(--border);background:var(--card);font-family:var(--ff-m);font-size:11px;color:var(--ink3);cursor:pointer;transition:.15s}
 .hf:hover{border-color:var(--border2)}
 .hf.on{background:var(--teal-dim);border-color:rgba(27,107,88,.3);color:var(--teal)}
-.hist-search{flex:1;min-width:160px;background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);padding:7px 12px 7px 32px;font-family:var(--ff-b);font-size:13px;color:var(--ink);outline:none;transition:.18s;position:relative}
-.hist-search:focus{border-color:rgba(27,107,88,.35);box-shadow:0 0 0 3px var(--teal-dim)}
-.hist-search::placeholder{color:var(--ink4)}
 .search-wrap{position:relative;flex:1;min-width:160px}
 .s-ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ink4);font-size:13px;pointer-events:none}
+.hist-search{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);padding:7px 12px 7px 32px;font-family:var(--ff-b);font-size:13px;color:var(--ink);outline:none;transition:.18s}
+.hist-search:focus{border-color:rgba(27,107,88,.35);box-shadow:0 0 0 3px var(--teal-dim)}
+.hist-search::placeholder{color:var(--ink4)}
 
 /* TX table */
 .tx-table{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);box-shadow:var(--sh);overflow:hidden}
@@ -321,21 +319,15 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
 .tx-row{display:grid;grid-template-columns:2fr 1.5fr 1fr 1fr 80px;gap:0;padding:13px 18px;border-bottom:1px solid var(--border);transition:.15s;align-items:center;animation:slideRight .28s ease both}
 .tx-row:last-child{border-bottom:none}
 .tx-row:hover{background:var(--card2)}
-.tx-row:nth-child(1){animation-delay:.03s}
-.tx-row:nth-child(2){animation-delay:.06s}
-.tx-row:nth-child(3){animation-delay:.09s}
-.tx-row:nth-child(4){animation-delay:.12s}
-.tx-row:nth-child(5){animation-delay:.15s}
-.tx-row:nth-child(6){animation-delay:.18s}
-.tx-row:nth-child(7){animation-delay:.21s}
-.tx-row:nth-child(8){animation-delay:.24s}
-/* cols */
+.tx-row:nth-child(1){animation-delay:.03s}.tx-row:nth-child(2){animation-delay:.06s}.tx-row:nth-child(3){animation-delay:.09s}.tx-row:nth-child(4){animation-delay:.12s}.tx-row:nth-child(5){animation-delay:.15s}
 .tc-from{display:flex;align-items:center;gap:10px}
 .tx-ava{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
 .tx-ava.in{background:rgba(27,107,88,.1);color:var(--teal)}
 .tx-ava.out{background:rgba(153,27,27,.08);color:var(--red)}
 .tc-name{font-size:13px;font-weight:500;color:var(--ink)}
-.tc-note{font-family:var(--ff-m);font-size:10.5px;color:var(--ink4);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.tc-meta{display:flex;align-items:center;gap:5px;margin-top:2px}
+.tc-note{font-family:var(--ff-m);font-size:10.5px;color:var(--ink4)}
+.tc-cat{font-family:var(--ff-m);font-size:9px;padding:1px 6px;border-radius:3px}
 .tc-addr{font-family:var(--ff-m);font-size:11px;color:var(--ink3)}
 .tc-time{font-family:var(--ff-m);font-size:11px;color:var(--ink3)}
 .tc-amt{font-family:var(--ff-d);font-size:14px;font-weight:700;letter-spacing:-.3px}
@@ -343,30 +335,22 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
 .tc-amt.out{color:var(--red)}
 .tc-status{display:flex;align-items:center;gap:6px;justify-content:flex-end}
 .st{font-family:var(--ff-m);font-size:10px;padding:2px 7px;border-radius:4px}
-.st-ok  {background:rgba(27,107,88,.09);color:var(--teal);border:1px solid rgba(27,107,88,.18)}
-.st-pnd {background:rgba(146,64,14,.08);color:var(--amber);border:1px solid rgba(146,64,14,.18)}
+.st-ok{background:rgba(27,107,88,.09);color:var(--teal);border:1px solid rgba(27,107,88,.18)}
+.st-pnd{background:rgba(146,64,14,.08);color:var(--amber);border:1px solid rgba(146,64,14,.18)}
 .st-fail{background:rgba(153,27,27,.07);color:var(--red);border:1px solid rgba(153,27,27,.14)}
-.tc-ext{color:var(--ink4);cursor:pointer;transition:.15s;font-size:12px}
+.tc-ext{color:var(--ink4);cursor:pointer;transition:.15s;font-size:12px;text-decoration:none}
 .tc-ext:hover{color:var(--teal)}
 .tx-empty{padding:60px 24px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .tx-empty-ic{font-size:34px;opacity:.35;margin-bottom:12px}
 .tx-empty-t{font-family:var(--ff-m);font-size:13px;color:var(--ink3)}
 .tx-empty-s{font-family:var(--ff-m);font-size:11px;color:var(--ink4);margin-top:4px}
-@media(max-width:720px){
-  .tx-thead{grid-template-columns:1fr 1fr 80px}
-  .tx-row{grid-template-columns:1fr 1fr 80px}
-  .tc-addr,.tc-time{display:none}
-}
-
-/* Export */
 .export-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-family:var(--ff-m);font-size:11px;color:var(--ink3);cursor:pointer;transition:.15s}
 .export-btn:hover{border-color:var(--border2);color:var(--ink)}
 
-/* ════════════════════════════════════════════════════════
-   MODALS
-════════════════════════════════════════════════════════ */
+/* ═══ MODALS ═══ */
 .overlay{position:fixed;inset:0;z-index:200;background:rgba(20,18,16,.42);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:fadeIn .18s ease}
-.modal{background:var(--card);border:1px solid var(--border);border-radius:var(--r3);padding:28px;width:420px;max-width:95vw;box-shadow:0 20px 72px rgba(0,0,0,.15);animation:popIn .22s cubic-bezier(.22,1,.36,1)}
+[data-theme="dark"] .overlay{background:rgba(0,0,0,.6)}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:var(--r3);padding:28px;width:460px;max-width:95vw;box-shadow:0 20px 72px rgba(0,0,0,.15);animation:popIn .22s cubic-bezier(.22,1,.36,1)}
 .m-title{font-family:var(--ff-d);font-weight:700;font-size:17px;margin-bottom:5px;letter-spacing:-.3px}
 .m-sub{font-size:13px;color:var(--ink3);line-height:1.55;margin-bottom:20px}
 .m-row{margin-bottom:13px}
@@ -375,14 +359,30 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
 .m-inp:focus{border-color:var(--teal);background:var(--card);box-shadow:0 0 0 3px var(--teal-dim)}
 .m-foot{display:flex;gap:8px;margin-top:22px}
 .m-foot .btn{flex:1}
-/* QR in modal */
 .m-qr{display:flex;justify-content:center;padding:14px 0 8px}
 .m-addr-box{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:11px 13px;font-family:var(--ff-m);font-size:12px;color:var(--teal);word-break:break-all;cursor:pointer;line-height:1.55;transition:.15s;margin-bottom:4px}
 .m-addr-box:hover{border-color:var(--teal)}
 
-/* ════════════════════════════════════════════════════════
-   TOASTS
-════════════════════════════════════════════════════════ */
+/* Confirmation modal */
+.confirm-section{background:var(--surface);border-radius:var(--r2);padding:16px;margin-bottom:16px}
+.confirm-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.confirm-row:last-child{margin-bottom:0}
+.confirm-label{font-family:var(--ff-m);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4)}
+.confirm-val{font-family:var(--ff-m);font-size:12px;color:var(--ink);text-align:right;max-width:240px;word-break:break-all}
+.confirm-amt{font-family:var(--ff-d);font-size:22px;font-weight:800;color:var(--ink);letter-spacing:-.8px;text-align:center;padding:10px 0 4px}
+.confirm-sym{font-family:var(--ff-m);font-size:12px;color:var(--ink3);text-align:center;margin-bottom:4px}
+.confirm-warn{background:rgba(146,64,14,.08);border:1px solid rgba(146,64,14,.2);border-radius:var(--r);padding:10px 13px;font-family:var(--ff-m);font-size:11px;color:var(--amber);line-height:1.55;margin-bottom:16px;display:none}
+.confirm-warn.show{display:block}
+
+/* Trust level selector in contact modal */
+.trust-row{display:flex;gap:6px;margin-top:4px}
+.trust-opt{flex:1;padding:7px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);font-family:var(--ff-m);font-size:10.5px;text-align:center;cursor:pointer;transition:.15s}
+.trust-opt:hover{border-color:var(--border2)}
+.trust-opt.on[data-t="trusted"]{background:rgba(27,107,88,.1);border-color:rgba(27,107,88,.3);color:var(--teal)}
+.trust-opt.on[data-t="unknown"]{background:rgba(146,64,14,.08);border-color:rgba(146,64,14,.3);color:var(--amber)}
+.trust-opt.on[data-t="flagged"]{background:rgba(153,27,27,.08);border-color:rgba(153,27,27,.3);color:var(--red)}
+
+/* ═══ TOASTS ═══ */
 #toasts{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:7px}
 .toast{display:flex;align-items:center;gap:9px;padding:11px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--r2);box-shadow:var(--sh2);font-family:var(--ff-m);font-size:12px;animation:slideLeft .28s ease;max-width:300px}
 .ti{font-size:14px;flex-shrink:0}
@@ -390,31 +390,89 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
 .toast.terr .tm{color:var(--red)}
 .toast.tinfo .tm{color:var(--blue)}
 
-/* ════════════════════════════════════════════════════════
-   RESPONSIVE
-════════════════════════════════════════════════════════ */
-@media(max-width:860px){
-  .pay-grid{grid-template-columns:1fr}
-  .hist-summary{grid-template-columns:1fr 1fr}
-  #pg-pay,#pg-history{padding:18px 16px 56px}
-}
-@media(max-width:540px){
-  .hist-summary{grid-template-columns:1fr 1fr}
-  .rec-row{grid-template-columns:1fr 1fr}
-  #topnav{padding:0 14px}
-}
+/* Wrong net banner */
+#wrong-net{display:none;background:rgba(153,27,27,.07);border-bottom:1px solid rgba(153,27,27,.2);padding:7px 28px;text-align:center;font-family:var(--ff-m);font-size:11.5px;color:var(--red)}
+
+/* ═══ RECEIPT ═══ */
+.receipt-wrap{background:#FAFAF7;border-radius:20px;overflow:visible;box-shadow:0 24px 64px rgba(0,0,0,.2);animation:receiptSlideUp .35s cubic-bezier(.22,1,.36,1)}
+.receipt-header{background:#1B6B58;padding:32px 24px 26px;text-align:center;position:relative}
+.receipt-check-ring{width:62px;height:62px;border-radius:50%;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.3);margin:0 auto 14px;display:flex;align-items:center;justify-content:center;animation:receiptPop .55s cubic-bezier(.22,1,.36,1) .1s both}
+.receipt-check-ring svg{width:28px;height:28px;stroke:#fff;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.receipt-sent-label{font-family:'Syne',sans-serif;font-weight:800;font-size:21px;color:#fff;letter-spacing:-.3px;margin-bottom:5px}
+.receipt-date-label{font-family:'DM Mono',monospace;font-size:11px;color:rgba(255,255,255,.5)}
+.receipt-amount-section{padding:20px 24px 18px;text-align:center;border-bottom:2px dashed #D8D3C8;position:relative}
+.receipt-notch{position:absolute;width:28px;height:28px;border-radius:50%;background:#EDEAE2;bottom:-14px}
+.receipt-notch.l{left:-14px}
+.receipt-notch.r{right:-14px}
+.receipt-amount-label{font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:#B0AA9F;margin-bottom:6px}
+.receipt-big-amt{font-family:'Syne',sans-serif;font-weight:800;font-size:42px;letter-spacing:-1.5px;color:#141210;line-height:1}
+.receipt-big-sym{font-family:'DM Mono',monospace;font-size:12px;color:#7C766E;margin-top:4px}
+.receipt-rows{padding:8px 24px 14px}
+.receipt-row{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:1px solid #EAE6DF}
+.receipt-row:last-child{border-bottom:none}
+.receipt-row-label{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#B0AA9F;flex-shrink:0;padding-top:1px}
+.receipt-row-val{font-family:'DM Mono',monospace;font-size:12px;color:#141210;text-align:right;max-width:230px;line-height:1.5;word-break:break-all}
+.receipt-row-val.ok{color:#1B6B58}
+.receipt-footer{border-top:2px dashed #D8D3C8;background:#F3F0EB;padding:16px 24px 18px;text-align:center;position:relative;border-radius:0 0 20px 20px}
+.receipt-footer-notch{position:absolute;width:28px;height:28px;border-radius:50%;background:#EDEAE2;top:-14px}
+.receipt-footer-notch.l{left:-14px}
+.receipt-footer-notch.r{right:-14px}
+.receipt-brand-line{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;letter-spacing:-.3px;color:#1B6B58;margin-bottom:3px}
+.receipt-brand-line span{color:#141210}
+.receipt-id-line{font-family:'DM Mono',monospace;font-size:10px;color:#B0AA9F}
+.receipt-actions{display:flex;gap:8px;margin-top:14px;animation:fadeUp .3s ease .2s both}
+/* ═══ GAS TRACKER WIDGET ═══ */
+#gas-widget{position:fixed;bottom:22px;left:22px;z-index:90;font-family:var(--ff-m);display:none}
+.gas-pill{display:flex;align-items:center;gap:7px;padding:7px 12px;background:var(--card);border:1px solid var(--border);border-radius:999px;box-shadow:var(--sh2);cursor:pointer;transition:.15s;user-select:none}
+.gas-pill:hover{border-color:var(--border2);background:var(--surface)}
+.gas-pill-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse 2.4s ease infinite;flex-shrink:0}
+.gas-pill-label{font-size:11px;color:var(--ink3)}
+.gas-pill-val{font-size:11.5px;color:var(--ink);font-weight:500}
+.gas-pill-refresh{font-size:12px;color:var(--ink4);padding:1px 4px;border-radius:4px;border:none;background:none;cursor:pointer;transition:.15s}
+.gas-pill-refresh:hover{color:var(--teal)}
+.gas-expanded{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);box-shadow:var(--sh2);padding:14px 16px;margin-bottom:8px;min-width:224px;animation:fadeUp .2s ease;display:none}
+.gas-expanded.open{display:block}
+.gas-exp-title{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink4);margin-bottom:10px}
+.gas-tiers{display:flex;flex-direction:column;gap:7px}
+.gas-tier{display:flex;align-items:center;gap:10px}
+.gas-tier-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.gas-tier-name{font-size:11px;color:var(--ink3);flex:1}
+.gas-tier-val{font-size:12px;color:var(--ink);font-weight:500}
+.gas-tier-time{font-size:10px;color:var(--ink4)}
+.gas-sep{height:1px;background:var(--border);margin:9px 0}
+.gas-net-row{display:flex;justify-content:space-between}
+.gas-net-label{font-size:10px;color:var(--ink4)}
+.gas-net-val{font-size:10px;color:var(--ink);font-weight:500}
+
+/* ═══ BATCH SEND ═══ */
+.batch-recipient-row{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.batch-idx{font-family:var(--ff-m);font-size:10px;color:var(--ink4);width:18px;flex-shrink:0;text-align:center}
+.batch-inp-addr{flex:2;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:8px 10px;font-family:var(--ff-m);font-size:11.5px;color:var(--ink);outline:none;transition:.18s;min-width:0}
+.batch-inp-addr:focus{border-color:var(--teal);background:var(--card);box-shadow:0 0 0 3px var(--teal-dim)}
+.batch-inp-amt{flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:8px 10px;font-family:var(--ff-m);font-size:11.5px;color:var(--ink);outline:none;transition:.18s;min-width:0}
+.batch-inp-amt:focus{border-color:var(--teal);background:var(--card);box-shadow:0 0 0 3px var(--teal-dim)}
+.batch-remove{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--ink4);cursor:pointer;font-size:11px;flex-shrink:0;transition:.15s;display:flex;align-items:center;justify-content:center}
+.batch-remove:hover{background:rgba(153,27,27,.07);color:var(--red);border-color:rgba(153,27,27,.2)}
+.batch-progress{margin-top:10px;display:flex;flex-direction:column;gap:4px}
+.batch-prog-row{display:flex;align-items:center;gap:8px;font-family:var(--ff-m);font-size:11px;color:var(--ink3);padding:3px 0}
+
+/* ═══ NOTIF BADGE ═══ */
+.notif-badge{position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--teal);color:#fff;font-family:var(--ff-m);font-size:9px;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg);animation:popIn .2s ease}
+@media(max-width:500px){.receipt-big-amt{font-size:32px}.receipt-wrap{border-radius:16px}}
+@media(max-width:860px){.pay-grid{grid-template-columns:1fr}.hist-summary{grid-template-columns:1fr 1fr}#pg-pay,#pg-history{padding:18px 16px 56px}}
+@media(max-width:720px){.tx-thead{grid-template-columns:1fr 1fr 80px}.tx-row{grid-template-columns:1fr 1fr 80px}.tc-addr,.tc-time{display:none}}
+@media(max-width:640px){.net-pill{display:none}.pg-tabs{gap:0}.pg-tab{padding:5px 11px;font-size:11px}}
+@media(max-width:540px){.hist-summary{grid-template-columns:1fr 1fr}.rec-row{grid-template-columns:1fr 1fr}#topnav{padding:0 14px}}
+@media(max-width:500px){.home-footer{display:none}.home-inner{padding:0 24px}#gas-widget{display:none!important}}
+@media(max-width:420px){.tn-brand{display:none}}
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════════
-     PAGE 1 — HOME
-══════════════════════════════════════════════════ -->
+<!-- ══ HOME ══ -->
 <div id="pg-home" class="pg on" style="min-height:100vh">
   <div class="home-inner">
-    <div class="home-logo">
-      <img id="home-logo-img" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAgESAAMAAAABAAEAAIdpAAQAAAABAAAAJgAAAAAAAqACAAQAAAABAAABkKADAAQAAAABAAABkAAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/+ICoElDQ19QUk9GSUxFAAEBAAACkGxjbXMEMAAAbW50clJHQiBYWVogAAAAAAAAAAAAAAAAYWNzcEFQUEwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPbWAAEAAAAA0y1sY21zAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALZGVzYwAAAQgAAAA4Y3BydAAAAUAAAABOd3RwdAAAAZAAAAAUY2hhZAAAAaQAAAAsclhZWgAAAdAAAAAUYlhZWgAAAeQAAAAUZ1hZWgAAAfgAAAAUclRSQwAAAgwAAAAgZ1RSQwAAAiwAAAAgYlRSQwAAAkwAAAAgY2hybQAAAmwAAAAkbWx1YwAAAAAAAAABAAAADGVuVVMAAAAcAAAAHABzAFIARwBCACAAYgB1AGkAbAB0AC0AaQBuAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAADIAAAAcAE4AbwAgAGMAbwBwAHkAcgBpAGcAaAB0ACwAIAB1AHMAZQAgAGYAcgBlAGUAbAB5AAAAAFhZWiAAAAAAAAD21gABAAAAANMtc2YzMgAAAAAAAQxKAAAF4///8yoAAAebAAD9h///+6L///2jAAAD2AAAwJRYWVogAAAAAAAAb5QAADjuAAADkFhZWiAAAAAAAAAknQAAD4MAALa+WFlaIAAAAAAAAGKlAAC3kAAAGN5wYXJhAAAAAAADAAAAAmZmAADypwAADVkAABPQAAAKW3BhcmEAAAAAAAMAAAACZmYAAPKnAAANWQAAE9AAAApbcGFyYQAAAAAAAwAAAAJmZgAA8qcAAA1ZAAAT0AAACltjaHJtAAAAAAADAAAAAKPXAABUewAATM0AAJmaAAAmZgAAD1z/wAARCAGQAZADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9sAQwAEBAQEBAQHBAQHCgcHBwoNCgoKCg0QDQ0NDQ0QFBAQEBAQEBQUFBQUFBQUGBgYGBgYHBwcHBwfHx8fHx8fHx8f/9sAQwEFBQUIBwgOBwcOIBYSFiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg/90ABAAZ/9oADAMBAAIRAxEAPwD7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9D7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9H7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9L7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9P7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiqV9qWnaZD9o1K4ito/78zqi/mxAoAu0Vxp+I3w9VireItLBHUG8g/8Ai6UfEX4fMMjxDpZHteQf/FU7MLnY0Vx//Cw/AH/QwaZ/4GQf/FU//hP/AAJ/0HtN/wDAuD/4qizA62iuTHj3wKxwuvacT7XcP/xVO/4TrwR/0HNO/wDAqH/4qizA6qiuYHjfwWwyut6eR7XUP/xVH/CbeDP+g1Yf+BMP/wAVRZgdPRXNjxl4QIyNYsSP+vmL/wCKp6eLvCkjBI9WsmJ4AFxESf8Ax6iwHQ0UyOSOVBJEwdWGQQcgj2NPpAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf/1PsaiiiuI2CiiigAooooAKKKKACiiigAooooAKKKKACiiigAoJCgkkADkk9qK+Yf2mPiDP4d8Pw+EtLkMd1qwYzMDhlthwR/20PH0BHenFXdgbscj8Vv2k5re5l0D4dsv7slZdQIDgnuIVPGP9s5z2HRj8faprGq63dNf6xdS3c79ZJnZ2P4k9Pas6iuqMVHYybuFFFFUIKKKKACiiigAooooAKKKKAN/QvFXiTwzOLjw/qFxZODk+TIyqf95ejD2INfX3ws/aVGoXEWg/ELy4ZHIWO/QBELHoJVHC/7wwPUAc18RUVMoqW402j9ngQQCCCDyCKK+Yf2aPiHceI9Bm8I6tKZLvSlVoWY5Z7Y8Ae/lnA+hA7V9PVyyVnY1TuFFFFIAooooAKKKKACiiigAooooAKKKKACiiigAooooA//1fsaiiiuI2CiiigAooooAKKKKACiiigAooooAKKKKACiiigAr82f2kdRlvfitfWzkkWUNvCnPQGJZD+rmv0mr85/2mtGl074mSaiy/u9StoZlPYmNfJI+o2D8xWtL4iZ7HzzRRRXQZhRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAHuH7O2qPpvxW06IMQl4k1u/uDGzAf99IK/S6vyT+Herx6D460XV522xW97C0hPaMuA5/75Jr9bK56q1NIbBRRRWRQUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf//W+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACvDvjx8N5fH/hMTaWm/U9MLTW4HWRSB5kX1IAI9wB3r3GimnZ3Bq5+Mbo8bmOQFWUkEEYII7Gm1+ivxU/Z+0bxzPJrugSLpuqv80hIPkTt6uByrf7QznuCea+OfEHwa+JXhuVkvNGnmjU8S2qm4Qj1zHkgf7wFdMZpmTi0eYUVst4d8QIxV9OugR1BhkB/lVdtH1dBl7OcD3jcf0qxGdRViS2uYv8AWxOn1Uiq9ABRRRQAUUUUAFFFFABRRRQAV+l3wK+JFv468JxWV3IP7V0xFhuEJ+Z0Awkw9Q4HPowPqK/NGtvw74j1nwnq8OuaDcNbXUByGHII7qwPDKe4NROPMhp2P2Dor5m8C/tM+E9cgjtPF4/si+wAZMM9u59QwyU+jcD+8a+gNN8SeHtYQSaTqNtdhuhhmR8/98k1zuLW5qmmbNFFFSAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB//9f7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKjeKKQESIGB4IIBzUlFAHn3iP4V/D7xTEyatpFuZGH+uhQQyg+u+PBP45FfGvxU/Z41Xwbby6/4YkfUdMjBaVGA8+Bf7xxw6juwAI7jAJr9C6CAwIIBB4IPerjNoTimfjDRXu/7QHw8g8DeLxdaXGI9O1UNNCgGFjkBHmRj2BIYDsCB2rwiulO6uZNWCiiimAUUUUAFFFFABRRRQB0ui+MvFfhyQSaHqd1abTkCOVgp+q52kexFfVPw1/acmkuI9H+IirtchVv4l24P/TVBxj/aXGPTvXxjRUuKe402j9m4pYp41ngZZI3AZWUgqVIyCCOoNPr49/Zf+IlxexTfD/VZN5t0M9kzHkRgjfF+BIYD0J7AV9hVzSjyuxqncKKKKkAooooAKKKKACiiigAooooA/9D7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD5u/aj0uG8+HUeokfvLG8iYHvtkDIw/EkH8BX55V+hX7Umrw2Xw+h0st+9v7yNQvcpEGdj+B2j8a/PWuml8JnLcKKKK0JCiiigAooooAKKKKACiiigD0r4PanLpPxP0C5iJBkvI4D7rcfuSPyev1Ur8rfg5pUur/E/QbaIZ8u7S4Pstv++J/8cr9Uq56u5pDYKKKKyKCiiigAooooAKKKKACiiigD/9H7GoooriNgooooAKKKKACiiigAooooAKKKKACiimSSRwoZJWCKOpJwB+NAD6Kxz4h0BTtbULUH0MyZ/nTf+Ek8O/8AQRtf+/0f+NOwG1RWL/wknh3/AKCNr/3+j/xpR4j8PE4Go2v/AH+j/wAaLAbNFZH/AAkGg/8AP/bf9/U/xo/4SDQf+f8Atv8Av6n+NFgNeisj/hINB/5/7b/v6n+NH/CQaD/z/wBt/wB/U/xosBr0Vkf8JBoP/P8A23/f1P8AGmP4j8PRqXk1C1UDqTNGAP1osBtVHNNDbwvcXDqkcYLO7EKqqBkkk9ABXlniP42/DTwzEzXGrRXcqjiGzIuGJ9Mr8oP+8RXxl8U/jxr/AMQI30fTkOm6STzCGzJNjp5rDt32jj1zgVUYNickjL+OHxGT4heLjJp7E6Zp4MNrngPz88uO28gY/wBkDvmvGaKK6UrKxk9QooqWKGadtkCNIfRQSf0pgRUVdOmakpwbaUH3Rv8ACj+zdR/595f++G/woApUVd/s3Uf+feX/AL4b/Cj+zdR/595f++G/woApUVd/s3Uf+feX/vhv8KQ6ffggG3kBPTKN/hQBTorrdG8BeNPEMwh0bSLu4LHG4RMqD6uQFH4kV9X/AAy/ZlSxnj1r4hskzoQyWEZ3ID281+jf7q8epIyKmU0hpNlz9mP4cT6VZS+PdXi2TXyeVZKwwRCSC0mP9sgAewJ6NX1tTVRY1CIAAowABgAegp1c0pczuapWCiiipAKKKKACiiigAooooAKKKKAP/9L7GoooriNgooooAKKKKACiiigAooooAKZJLHDE00zBI0BZmY4UAckknoKfXyH+0/8AESfTrSHwDpUmx7xPOvWU4Pk5wkWf9sgk+wHZjVRjzOwN2MH4n/tL3j3Mui/DorHEhKvfuoZnPfylYYC/7RBJ7AdT8o6vr+ua/ObnW76e9kJzunkZyPpk8fhWTRXTGKjsZNthRRRVCCiiigAooooAKKKKACiiigAooooAK67wX4H8QePtZXRfD8PmSY3SSMcRxJn77t2H6nsDXKxRSTyLDCpeSQhVUDJJJwAK/VD4VfD+z+HfhODSkUG9mCy3so5LykcjP91Puj6Z6k1E58qKirnE+Cf2dPAnhiGOfWohrN6BlnuB+5B9Fi6Y/wB7cfpXutnY2Wnwi3sII7eNeiRIEUfgBirdFczbe5olYKKKKQBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAH/0/saiiiuI2CiiigAooooAKKKKACiiigAr8rfjJqsur/E/XrmUk+XdvbjPZbf9yB/45X6pV+Vvxk0mXR/ifrttKNvm3T3IOOq3H74Ef8Aff6VrS3JnseZ0UUV0GYUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB6f8GNNh1X4o6FaTgFVufOwehMCtKP1QV+p9flR8INVi0X4maFfzEKn2pYiT0AnBjyfb56/VeueruaQ2CiiisigooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//1PsaiiiuI2CiiigAooooAKKKKACiiigAr5L/AGm/hxcavZQ+PNIiMk1inlXiKMkwgkrJjvsJOfYg9Fr60prKrqUcZDDBBGQR6VUZcruDVz8Y6K+3Pib+zMt9cS618PGSF3JZ7CQ7UJ7+U/Rf91uPQgYFfJet+CvF3huUw65pV1alTjLxtsP0cDa31BNdMZpmTTRy9FKQVJDDBHY0lUIKKKKACiiigAooooAKKKKACiiigBVZkYOhIKnIIOCD61+pvwi+INt8QvCFvqDODf2wWG9ToRKB9/H92TG4fiOxr8sa6/wT441/wBraa3oEu1wNskbcxyx55Rx3Hv1HUVE48yHF2P1vorwrwR+0F4C8WQxw6jcDR74gBobpgqE/7EpwpH12n2r3CC4t7qIT2siyxuMh0YMp+hHFczTW5qnclooopAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf/1fsaiiiuI2CiiigAooooAKKKKACiiigAooooAKKKKAGsiOMOoYe4zURtbUjBiQj0Kip6KAK4s7RfuwoPoopfs1t/zzX/AL5FT0UARrDCowqKB7AUvlR/3BT6KAGeVH/cFHlR/wBwU+igBnlR/wBwU2S3t5VKSRqwPUFQRUtFAHnniL4U/D3xPE0eqaPbB3/5bQoIZQfXfHgn8civiv4s/APVfAcT67oLvqGkKcuSB51uP9sDhl/2gB7gdT+i9RyxRTxPBOokjcFWVgCpUjBBB6girjNxE4pn4y0V6/8AGv4er8PfGUlpYrjT70faLXPO1ScNHn/YPH0IryCulO6uZBVm3vLu0O60mkhJ7oxU/pVaimB6DoXxV+InhyVZNM1q62qf9XNIZoz7bJcj8hX158LP2jdP8U3UOgeMI0sNQkIWKdDiCVuykHmNj25IJ7jgV8BUVMoJjTaP2eor52/Z2+I9x4y8NSaHrEvmajpIVS7HLSwHhGJ7sMFSfoTya+ia5WrOxqncKKKKQBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB//9b7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD5f8A2qtHiu/BFjrIUebY3oUH0jnRgw/76VPyr4Br9Hf2mf8Akl03/X1B/wChGvzirppfCZy3CiiitCQooooA90/Zz1iXSvinY26sRHfxzW0g9RsLr/48gr9Kq/LX4JDPxV0H/r4P/otq/UqueruaQ2CiiisigooooAKKKKACiiigAooooAKKKKACiiigAooooA//1/saiiiuI2CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPn79pn/kl03/X1B/6Ea/OKv0d/aZ/5JdN/19Qf+hGvzirppfCZz3CiiitCQooooA9V+CP/ACVbQf8Ar4P/AKLev1Jr8tvgj/yVbQf+vg/+i3r9Sa56u5pDYKKKKyKCiiigAooooAKKKKACiiigAooooAKKKKACiiigD//Q+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA+fv2mf+SXTf9fUH/oRr84q/R39pn/kl03/X1B/6Ea/OKuml8JnPcKKKK0JCiiigD1X4I/8AJVtB/wCvg/8Aot6/Umvy2+CP/JVtB/6+D/6Lev1Jrnq7mkNgooorIoKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/9H7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD5+/aZ/5JdN/19Qf+hGvzir9Mv2htNk1H4U6mYgS1q0M+B6JKoY/gpJ/CvzNropfCZz3CiiitSQooooA9T+CRI+KugkDP+kH/ANAav1Lr8z/2d9Mk1H4rabIoylok1w/sBEyg/wDfTiv0wrnq7mkNgooorIoKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//S+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAo6pptprGmXOk3677e7ieGRfVJFKkfka/Jjxp4U1HwT4lu/DmpqfMtnIR8YEkZ5SQexGD7cjtX6615X8UvhRonxN0xY7k/ZtQtwfs90q5K/7Dj+JCe3UHkd86U58rFJXPy1or0Lxn8LvGvgW4ddbsXNuh4uoQXgYdjvA+X6Ng+1ee10J3Mgoq1Z2V5qNwlnp8L3EznCxxKXcn0Cjk19Z/Cr9m6/urmHXviHH5FshDJYE5eQ9R5uPur/s9T0OO6lJR3Glc7f9l/wHPo2i3HjTUkMc2qAR2wIwRbg5L/SRsfgoPevqqmRRxwxrDCoREAVVAwABwAB2FPrmk7u5qlYKKKKkAooooAKKKKACiiigAooooAKKKKACiiigAooooA//0/saiiiuI2CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAIBBBAIPBBrlbrwL4IvpTPe6Hp80hOS0lrC7E/UrXVUVQGbp2jaPo6GLSLOC0U9RBGkYP4KBWlRRUgFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf/U+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//V+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//W+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//X+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//Z" alt="RialoPay"/>
-    </div>
+    <div class="home-logo"><img id="home-logo-img" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAgESAAMAAAABAAEAAIdpAAQAAAABAAAAJgAAAAAAAqACAAQAAAABAAABkKADAAQAAAABAAABkAAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/+ICoElDQ19QUk9GSUxFAAEBAAACkGxjbXMEMAAAbW50clJHQiBYWVogAAAAAAAAAAAAAAAAYWNzcEFQUEwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPbWAAEAAAAA0y1sY21zAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALZGVzYwAAAQgAAAA4Y3BydAAAAUAAAABOd3RwdAAAAZAAAAAUY2hhZAAAAaQAAAAsclhZWgAAAdAAAAAUYlhZWgAAAeQAAAAUZ1hZWgAAAfgAAAAUclRSQwAAAgwAAAAgZ1RSQwAAAiwAAAAgYlRSQwAAAkwAAAAgY2hybQAAAmwAAAAkbWx1YwAAAAAAAAABAAAADGVuVVMAAAAcAAAAHABzAFIARwBCACAAYgB1AGkAbAB0AC0AaQBuAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAADIAAAAcAE4AbwAgAGMAbwBwAHkAcgBpAGcAaAB0ACwAIAB1AHMAZQAgAGYAcgBlAGUAbAB5AAAAAFhZWiAAAAAAAAD21gABAAAAANMtc2YzMgAAAAAAAQxKAAAF4///8yoAAAebAAD9h///+6L///2jAAAD2AAAwJRYWVogAAAAAAAAb5QAADjuAAADkFhZWiAAAAAAAAAknQAAD4MAALa+WFlaIAAAAAAAAGKlAAC3kAAAGN5wYXJhAAAAAAADAAAAAmZmAADypwAADVkAABPQAAAKW3BhcmEAAAAAAAMAAAACZmYAAPKnAAANWQAAE9AAAApbcGFyYQAAAAAAAwAAAAJmZgAA8qcAAA1ZAAAT0AAACltjaHJtAAAAAAADAAAAAKPXAABUewAATM0AAJmaAAAmZgAAD1z/wAARCAGQAZADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9sAQwAEBAQEBAQHBAQHCgcHBwoNCgoKCg0QDQ0NDQ0QFBAQEBAQEBQUFBQUFBQUGBgYGBgYHBwcHBwfHx8fHx8fHx8f/9sAQwEFBQUIBwgOBwcOIBYSFiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg/90ABAAZ/9oADAMBAAIRAxEAPwD7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9D7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9H7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9L7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo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jcFWVgCpUjBBB6girjNxE4pn4y0V6/8AGv4er8PfGUlpYrjT70faLXPO1ScNHn/YPH0IryCulO6uZBVm3vLu0O60mkhJ7oxU/pVaimB6DoXxV+InhyVZNM1q62qf9XNIZoz7bJcj8hX158LP2jdP8U3UOgeMI0sNQkIWKdDiCVuykHmNj25IJ7jgV8BUVMoJjTaP2eor52/Z2+I9x4y8NSaHrEvmajpIVS7HLSwHhGJ7sMFSfoTya+ia5WrOxqncKKKKQBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB//9b7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD5f8A2qtHiu/BFjrIUebY3oUH0jnRgw/76VPyr4Br9Hf2mf8Akl03/X1B/wChGvzirppfCZy3CiiitCQooooA90/Zz1iXSvinY26sRHfxzW0g9RsLr/48gr9Kq/LX4JDPxV0H/r4P/otq/UqueruaQ2CiiisigooooAKKKKACiiigAooooAKKKKACiiigAooooA//1/saiiiuI2CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPn79pn/kl03/X1B/6Ea/OKv0d/aZ/5JdN/19Qf+hGvzirppfCZz3CiiitCQooooA9V+CP/ACVbQf8Ar4P/AKLev1Jr8tvgj/yVbQf+vg/+i3r9Sa56u5pDYKKKKyKCiiigAooooAKKKKACiiigAooooAKKKKACiiigD//Q+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA+fv2mf+SXTf9fUH/oRr84q/R39pn/kl03/X1B/6Ea/OKuml8JnPcKKKK0JCiiigD1X4I/8AJVtB/wCvg/8Aot6/Umvy2+CP/JVtB/6+D/6Lev1Jrnq7mkNgooorIoKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/9H7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD5+/aZ/5JdN/19Qf+hGvzir9Mv2htNk1H4U6mYgS1q0M+B6JKoY/gpJ/CvzNropfCZz3CiiitSQooooA9T+CRI+KugkDP+kH/ANAav1Lr8z/2d9Mk1H4rabIoylok1w/sBEyg/wDfTiv0wrnq7mkNgooorIoKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//S+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAo6pptprGmXOk3677e7ieGRfVJFKkfka/Jjxp4U1HwT4lu/DmpqfMtnIR8YEkZ5SQexGD7cjtX6615X8UvhRonxN0xY7k/ZtQtwfs90q5K/7Dj+JCe3UHkd86U58rFJXPy1or0Lxn8LvGvgW4ddbsXNuh4uoQXgYdjvA+X6Ng+1ee10J3Mgoq1Z2V5qNwlnp8L3EznCxxKXcn0Cjk19Z/Cr9m6/urmHXviHH5FshDJYE5eQ9R5uPur/s9T0OO6lJR3Glc7f9l/wHPo2i3HjTUkMc2qAR2wIwRbg5L/SRsfgoPevqqmRRxwxrDCoREAVVAwABwAB2FPrmk7u5qlYKKKKkAooooAKKKKACiiigAooooAKKKKACiiigAooooA//0/saiiiuI2CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAIBBBAIPBBrlbrwL4IvpTPe6Hp80hOS0lrC7E/UrXVUVQGbp2jaPo6GLSLOC0U9RBGkYP4KBWlRRUgFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf/U+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//V+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//W+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//X+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//Z" alt="RialoPay"/></div>
     <div class="home-brand">Rialo<span>Pay</span></div>
     <div class="home-tag">Your money. Instant.</div>
     <button class="home-btn" onclick="connectWallet()">
@@ -424,21 +482,14 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
   </div>
   <div class="home-footer">
     <div class="hf-item"><div style="width:5px;height:5px;border-radius:50%;background:var(--teal);animation:pulse 2.4s ease infinite"></div>Live</div>
-    <div class="hf-sep"></div>
-    <div class="hf-item">No setup required</div>
-    <div class="hf-sep"></div>
-    <div class="hf-item">MetaMask · WalletConnect</div>
-    <div class="hf-sep"></div>
-    <div class="hf-item">Free test tokens on connect</div>
+    <div class="hf-sep"></div><div class="hf-item">No setup required</div>
+    <div class="hf-sep"></div><div class="hf-item">MetaMask · WalletConnect</div>
+    <div class="hf-sep"></div><div class="hf-item">Free test tokens on connect</div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════
-     APP SHELL  (pages 2+)
-══════════════════════════════════════════════════ -->
+<!-- ══ APP SHELL ══ -->
 <div id="pg-app" class="pg" style="min-height:100vh">
-
-  <!-- top nav -->
   <div id="topnav">
     <div class="tn-logo">
       <div class="tn-logo-box"><img id="nav-logo-img" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAgESAAMAAAABAAEAAIdpAAQAAAABAAAAJgAAAAAAAqACAAQAAAABAAABkKADAAQAAAABAAABkAAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/+ICoElDQ19QUk9GSUxFAAEBAAACkGxjbXMEMAAAbW50clJHQiBYWVogAAAAAAAAAAAAAAAAYWNzcEFQUEwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPbWAAEAAAAA0y1sY21zAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALZGVzYwAAAQgAAAA4Y3BydAAAAUAAAABOd3RwdAAAAZAAAAAUY2hhZAAAAaQAAAAsclhZWgAAAdAAAAAUYlhZWgAAAeQAAAAUZ1hZWgAAAfgAAAAUclRSQwAAAgwAAAAgZ1RSQwAAAiwAAAAgYlRSQwAAAkwAAAAgY2hybQAAAmwAAAAkbWx1YwAAAAAAAAABAAAADGVuVVMAAAAcAAAAHABzAFIARwBCACAAYgB1AGkAbAB0AC0AaQBuAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAADIAAAAcAE4AbwAgAGMAbwBwAHkAcgBpAGcAaAB0ACwAIAB1AHMAZQAgAGYAcgBlAGUAbAB5AAAAAFhZWiAAAAAAAAD21gABAAAAANMtc2YzMgAAAAAAAQxKAAAF4///8yoAAAebAAD9h///+6L///2jAAAD2AAAwJRYWVogAAAAAAAAb5QAADjuAAADkFhZWiAAAAAAAAAknQAAD4MAALa+WFlaIAAAAAAAAGKlAAC3kAAAGN5wYXJhAAAAAAADAAAAAmZmAADypwAADVkAABPQAAAKW3BhcmEAAAAAAAMAAAACZmYAAPKnAAANWQAAE9AAAApbcGFyYQAAAAAAAwAAAAJmZgAA8qcAAA1ZAAAT0AAACltjaHJtAAAAAAADAAAAAKPXAABUewAATM0AAJmaAAAmZgAAD1z/wAARCAGQAZADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9sAQwAEBAQEBAQHBAQHCgcHBwoNCgoKCg0QDQ0NDQ0QFBAQEBAQEBQUFBQUFBQUGBgYGBgYHBwcHBwfHx8fHx8fHx8f/9sAQwEFBQUIBwgOBwcOIBYSFiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg/90ABAAZ/9oADAMBAAIRAxEAPwD7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9D7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9H7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9L7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo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jcFWVgCpUjBBB6girjNxE4pn4y0V6/8AGv4er8PfGUlpYrjT70faLXPO1ScNHn/YPH0IryCulO6uZBVm3vLu0O60mkhJ7oxU/pVaimB6DoXxV+InhyVZNM1q62qf9XNIZoz7bJcj8hX158LP2jdP8U3UOgeMI0sNQkIWKdDiCVuykHmNj25IJ7jgV8BUVMoJjTaP2eor52/Z2+I9x4y8NSaHrEvmajpIVS7HLSwHhGJ7sMFSfoTya+ia5WrOxqncKKKKQBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB//9b7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD5f8A2qtHiu/BFjrIUebY3oUH0jnRgw/76VPyr4Br9Hf2mf8Akl03/X1B/wChGvzirppfCZy3CiiitCQooooA90/Zz1iXSvinY26sRHfxzW0g9RsLr/48gr9Kq/LX4JDPxV0H/r4P/otq/UqueruaQ2CiiisigooooAKKKKACiiigAooooAKKKKACiiigAooooA//1/saiiiuI2CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPn79pn/kl03/X1B/6Ea/OKv0d/aZ/5JdN/19Qf+hGvzirppfCZz3CiiitCQooooA9V+CP/ACVbQf8Ar4P/AKLev1Jr8tvgj/yVbQf+vg/+i3r9Sa56u5pDYKKKKyKCiiigAooooAKKKKACiiigAooooAKKKKACiiigD//Q+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA+fv2mf+SXTf9fUH/oRr84q/R39pn/kl03/X1B/6Ea/OKuml8JnPcKKKK0JCiiigD1X4I/8AJVtB/wCvg/8Aot6/Umvy2+CP/JVtB/6+D/6Lev1Jrnq7mkNgooorIoKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/9H7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD5+/aZ/5JdN/19Qf+hGvzir9Mv2htNk1H4U6mYgS1q0M+B6JKoY/gpJ/CvzNropfCZz3CiiitSQooooA9T+CRI+KugkDP+kH/ANAav1Lr8z/2d9Mk1H4rabIoylok1w/sBEyg/wDfTiv0wrnq7mkNgooorIoKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//S+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAo6pptprGmXOk3677e7ieGRfVJFKkfka/Jjxp4U1HwT4lu/DmpqfMtnIR8YEkZ5SQexGD7cjtX6615X8UvhRonxN0xY7k/ZtQtwfs90q5K/7Dj+JCe3UHkd86U58rFJXPy1or0Lxn8LvGvgW4ddbsXNuh4uoQXgYdjvA+X6Ng+1ee10J3Mgoq1Z2V5qNwlnp8L3EznCxxKXcn0Cjk19Z/Cr9m6/urmHXviHH5FshDJYE5eQ9R5uPur/s9T0OO6lJR3Glc7f9l/wHPo2i3HjTUkMc2qAR2wIwRbg5L/SRsfgoPevqqmRRxwxrDCoREAVVAwABwAB2FPrmk7u5qlYKKKKkAooooAKKKKACiiigAooooAKKKKACiiigAooooA//0/saiiiuI2CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAIBBBAIPBBrlbrwL4IvpTPe6Hp80hOS0lrC7E/UrXVUVQGbp2jaPo6GLSLOC0U9RBGkYP4KBWlRRUgFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf/U+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//V+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//W+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//X+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//Z" alt=""/></div>
@@ -451,23 +502,39 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
       </div>
     </div>
     <div class="tn-right" id="tn-right">
-      <!-- injected on connect -->
+      <button class="dark-toggle" onclick="toggleDark()" id="dark-btn" title="Toggle dark mode">🌙</button>
     </div>
   </div>
+  <div id="wrong-net">⚠ Switch to <strong>Base Sepolia</strong> (Chain ID 84532) in MetaMask</div>
 
-  <!-- wrong net banner -->
-  <div id="wrong-net" style="display:none;background:rgba(153,27,27,.07);border-bottom:1px solid rgba(153,27,27,.2);padding:7px 28px;text-align:center;font-family:var(--ff-m);font-size:11.5px;color:var(--red)">
-    ⚠ Switch to <strong>Base Sepolia</strong> (Chain ID 84532) in MetaMask
+  <!-- ── GAS TRACKER WIDGET ── -->
+  <div id="gas-widget">
+    <div class="gas-expanded" id="gas-expanded">
+      <div class="gas-exp-title">⛽ Base Sepolia Gas</div>
+      <div class="gas-tiers" id="gas-tiers">
+        <div class="gas-tier"><div class="gas-tier-dot" style="background:#22c55e"></div><span class="gas-tier-name">Slow</span><span class="gas-tier-val" id="gas-slow">—</span><span class="gas-tier-time">~30s</span></div>
+        <div class="gas-tier"><div class="gas-tier-dot" style="background:var(--teal)"></div><span class="gas-tier-name">Standard</span><span class="gas-tier-val" id="gas-std">—</span><span class="gas-tier-time">~15s</span></div>
+        <div class="gas-tier"><div class="gas-tier-dot" style="background:var(--amber)"></div><span class="gas-tier-name">Fast</span><span class="gas-tier-val" id="gas-fast">—</span><span class="gas-tier-time">~5s</span></div>
+      </div>
+      <div class="gas-sep"></div>
+      <div class="gas-net-row"><span class="gas-net-label">Last block</span><span class="gas-net-val" id="gas-block">—</span></div>
+      <div class="gas-net-row" style="margin-top:4px"><span class="gas-net-label">Updated</span><span class="gas-net-val" id="gas-updated">—</span></div>
+    </div>
+    <div class="gas-pill" onclick="toggleGasExpand()">
+      <div class="gas-pill-dot"></div>
+      <span class="gas-pill-label">Gas</span>
+      <span class="gas-pill-val" id="gas-pill-std">— gwei</span>
+      <button class="gas-pill-refresh" onclick="event.stopPropagation();fetchGasPrice()" title="Refresh">↺</button>
+    </div>
   </div>
 
   <!-- ── PAYMENTS ── -->
   <div id="pg-pay" class="sub-pg on">
     <div style="padding:28px;max-width:1080px;margin:0 auto;width:100%">
     <div class="pay-grid">
-
       <!-- LEFT -->
       <div>
-        <!-- Balance -->
+        <!-- Balance card -->
         <div class="bal-card">
           <div class="bc-label">Available Balance</div>
           <div class="bc-amount"><span id="bal-val">—</span><span class="bc-sym" id="bal-sym">RLP</span></div>
@@ -478,31 +545,45 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
           </div>
         </div>
 
+        <!-- Monthly summary -->
+        <div class="monthly-card" id="monthly-card" style="display:none">
+          <div class="mc-head">
+            <div class="mc-title">📅 This Month</div>
+            <div class="mc-month" id="mc-month-label">—</div>
+          </div>
+          <div class="mc-stats">
+            <div class="mc-stat">
+              <div class="mc-stat-label">Received</div>
+              <div class="mc-stat-val green" id="mc-in">—</div>
+            </div>
+            <div class="mc-stat">
+              <div class="mc-stat-label">Sent</div>
+              <div class="mc-stat-val red" id="mc-out">—</div>
+            </div>
+          </div>
+          <div class="mc-bar-label">Spending by category</div>
+          <div id="mc-cats" class="mc-cats"></div>
+        </div>
+
         <!-- Send form -->
         <div class="form-card">
           <div class="fc-head">
-            <div class="fc-title">
-              <div class="fc-icon" style="background:var(--teal-dim);color:var(--teal)">⬆</div>
-              Send
-            </div>
+            <div class="fc-title"><div class="fc-icon" style="background:var(--teal-dim);color:var(--teal)">⬆</div>Send</div>
             <span class="fc-badge" id="send-sym">RLP</span>
           </div>
           <div class="fc-body">
-            <!-- contacts -->
             <div style="font-family:var(--ff-m);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);margin-bottom:8px">Quick contacts</div>
             <div class="contact-list" id="contact-list"></div>
-            <div class="add-c" onclick="openAddContact()">
-              <span style="font-size:15px;color:var(--ink4)">+</span>
-              <span>Add contact</span>
-            </div>
+            <div class="add-c" onclick="openAddContact()"><span style="font-size:15px;color:var(--ink4)">+</span><span>Add contact</span></div>
             <div class="or-div"><span class="or-text">or paste address</span></div>
             <div class="field">
-              <input class="inp" id="to-addr" placeholder="0x… recipient address"/>
+              <input class="inp" id="to-addr" placeholder="0x… recipient address" oninput="onAddrInput()"/>
+              <div id="trust-indicator" style="margin-top:5px;display:none"></div>
             </div>
             <div class="field">
               <label class="fl">Amount</label>
               <div class="amt-wrap">
-                <input class="amt-inp" id="send-amt" type="number" placeholder="0" min="0" step="any" oninput="clearQA()"/>
+                <input class="amt-inp" id="send-amt" type="number" placeholder="0" min="0" step="any" oninput="clearQA();updateSimulation()"/>
                 <span class="amt-sym" id="send-sym-lbl">RLP</span>
               </div>
               <div class="quick-row">
@@ -512,11 +593,35 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
                 <div class="qa" onclick="pickQA(this,'1000')">1k</div>
               </div>
             </div>
+
+            <!-- Transaction simulation -->
+            <div class="sim-box" id="sim-box">
+              <div class="sim-title">Transaction Preview</div>
+              <div class="sim-row"><span class="sim-label">Amount</span><span class="sim-val" id="sim-amount">—</span></div>
+              <div class="sim-row"><span class="sim-label">Estimated gas</span><span class="sim-val" id="sim-gas">~0.0001 ETH</span></div>
+              <div class="sim-row"><span class="sim-label">Current balance</span><span class="sim-val" id="sim-balance">—</span></div>
+              <div class="sim-divider"></div>
+              <div class="sim-result">
+                <span class="sim-result-label">Balance after send</span>
+                <span class="sim-result-val" id="sim-after">—</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="fl">Category</label>
+              <div class="cat-grid" id="send-cat-grid"></div>
+              <div id="other-label-wrap" style="display:none;margin-top:8px;animation:slideDown .18s ease">
+                <input class="inp" id="other-label" placeholder="What is this payment for?" maxlength="60"
+                  oninput="syncOtherLabel()"
+                  style="font-size:12px"/>
+              </div>
+            </div>
             <div class="field">
               <label class="fl">Note <span style="color:var(--ink4);font-size:9px">(optional)</span></label>
-              <input class="inp" id="send-note" placeholder="Invoice #, project…" maxlength="80"/>
+              <input class="inp" id="send-note" placeholder="Invoice #, project…" maxlength="80"
+                oninput="this.dataset.userEdited=this.value?'1':''"/>
             </div>
-            <button class="btn btn-teal btn-w" id="send-btn" onclick="sendTokens()">Send →</button>
+            <button class="btn btn-teal btn-w" id="send-btn" onclick="openConfirmModal()">Review & Send →</button>
           </div>
         </div>
       </div>
@@ -526,6 +631,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
         <div class="right-tabs">
           <button class="r-tab on" onclick="switchRTab(this,'rt-recv')">⬇ Receive</button>
           <button class="r-tab" onclick="switchRTab(this,'rt-req')">⚡ Request</button>
+          <button class="r-tab" onclick="switchRTab(this,'rt-split')">🔀 Split</button>
+          <button class="r-tab" onclick="switchRTab(this,'rt-batch')">📤 Batch</button>
           <button class="r-tab" onclick="switchRTab(this,'rt-recurring')">🔁 Recurring</button>
           <button class="r-tab" onclick="switchRTab(this,'rt-contacts')">👥 Contacts</button>
         </div>
@@ -545,7 +652,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
           </div>
         </div>
 
-        <!-- Request / Invoice -->
+        <!-- Request -->
         <div class="rtab-body" id="rt-req">
           <div class="field"><label class="fl">Amount</label>
             <div class="amt-wrap"><input class="amt-inp" id="req-amt" type="number" placeholder="0"/><span class="amt-sym">RLP</span></div>
@@ -559,6 +666,50 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
             <div class="pl-label">Tap to copy link</div>
             <span id="pay-link-text"></span>
           </div>
+        </div>
+
+        <!-- Split Bill -->
+        <div class="rtab-body" id="rt-split">
+          <div class="field">
+            <label class="fl">Total Bill Amount</label>
+            <div class="amt-wrap">
+              <input class="amt-inp" id="split-total" type="number" placeholder="0" oninput="recalcSplit()" style="font-size:22px;padding-top:11px;padding-bottom:11px"/>
+              <span class="amt-sym">RLP</span>
+            </div>
+          </div>
+          <div style="font-family:var(--ff-m);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);margin-bottom:8px">Split with</div>
+          <div class="split-recipients" id="split-recipients"></div>
+          <div class="add-c" onclick="openSplitAddContact()" style="margin-bottom:12px"><span style="font-size:15px;color:var(--ink4)">+</span><span>Add person to split</span></div>
+          <div class="split-summary" id="split-summary" style="display:none">
+            <div><div class="split-sum-label">Per person</div><div class="split-sum-val" id="split-per">—</div></div>
+            <div style="text-align:right"><div class="split-sum-label">Total</div><div class="split-sum-val" id="split-total-disp">—</div></div>
+          </div>
+          <button class="btn btn-teal btn-w" id="split-send-btn" onclick="sendSplitPayments()" disabled style="opacity:.4">Send Split Payments</button>
+          <div id="split-status" style="margin-top:10px;display:flex;flex-direction:column;gap:5px"></div>
+        </div>
+
+        <!-- Batch Send -->
+        <div class="rtab-body" id="rt-batch">
+          <div style="font-family:var(--ff-m);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink4);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+            <span>Recipients</span>
+            <span style="color:var(--ink4)" id="batch-total-label"></span>
+          </div>
+          <div style="font-family:var(--ff-m);font-size:10px;color:var(--ink4);margin-bottom:11px">Each recipient gets their own amount — not equal splits.</div>
+          <div id="batch-rows"></div>
+          <div style="display:flex;gap:6px;margin-bottom:14px">
+            <div class="add-c" onclick="addBatchRow()" style="flex:1"><span style="font-size:15px;color:var(--ink4)">+</span><span>Add recipient</span></div>
+            <div class="add-c" onclick="openBatchContactPicker()" style="flex:1;justify-content:center"><span>👥 From contacts</span></div>
+          </div>
+          <div class="field">
+            <label class="fl">Note (applies to all)</label>
+            <input class="inp" id="batch-note" placeholder="Payroll, grants…" maxlength="80"/>
+          </div>
+          <div class="field">
+            <label class="fl">Category</label>
+            <div class="cat-grid" id="batch-cat-grid"></div>
+          </div>
+          <button class="btn btn-teal btn-w" id="batch-send-btn" onclick="sendBatchPayments()">Send All →</button>
+          <div class="batch-progress" id="batch-progress"></div>
         </div>
 
         <!-- Recurring -->
@@ -575,7 +726,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
           </div>
           <div class="req-row">
             <div class="field"><label class="fl">Start date</label><input class="inp" id="rec-start" type="date"/></div>
-            <div class="field"><label class="fl">Note</label><input class="inp" id="rec-note" placeholder="Subscription…"/></div>
+            <div class="field"><label class="fl">Note</label><input class="inp" id="rec-note2" placeholder="Subscription…"/></div>
           </div>
           <button class="btn btn-teal btn-w" onclick="scheduleRecurring()">Schedule Recurring Payment</button>
           <div id="rec-list" style="margin-top:14px;display:flex;flex-direction:column;gap:7px"></div>
@@ -589,9 +740,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
           </div>
           <div id="contacts-full-list" style="display:flex;flex-direction:column;gap:7px"></div>
         </div>
-
       </div><!-- /right-panel -->
-    </div><!-- /pay-grid -->
+    </div>
     </div>
   </div><!-- /pg-pay -->
 
@@ -606,12 +756,32 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
         </div>
       </div>
 
+      <!-- Balance chart -->
+      <div class="chart-card">
+        <div class="chart-head">
+          <div class="chart-title">Balance Over Time</div>
+          <div class="chart-legend">
+            <div class="chart-leg-item"><div class="chart-leg-dot" style="background:var(--teal)"></div>Inflow</div>
+            <div class="chart-leg-item"><div class="chart-leg-dot" style="background:var(--red)"></div>Outflow</div>
+          </div>
+        </div>
+        <div class="chart-wrap" id="chart-wrap">
+          <div class="chart-empty" id="chart-empty">No transaction data yet</div>
+          <canvas id="balance-chart" style="display:none"></canvas>
+        </div>
+      </div>
+
       <!-- Summary -->
       <div class="hist-summary">
         <div class="hs-card"><div class="hs-label">Total In</div><div class="hs-val green" id="hs-in">—</div><div class="hs-sub" id="hs-in-sub">0 payments</div></div>
         <div class="hs-card"><div class="hs-label">Total Out</div><div class="hs-val red" id="hs-out">—</div><div class="hs-sub" id="hs-out-sub">0 payments</div></div>
         <div class="hs-card"><div class="hs-label">Net Flow</div><div class="hs-val" id="hs-net">—</div><div class="hs-sub">balance change</div></div>
         <div class="hs-card"><div class="hs-label">Largest Payment</div><div class="hs-val" id="hs-max">—</div><div class="hs-sub" id="hs-max-sub">—</div></div>
+      </div>
+
+      <!-- Category filters -->
+      <div class="cat-filter-row" id="cat-filter-row">
+        <div class="cat-filter on" onclick="setCatFilter(this,'all')">All categories</div>
       </div>
 
       <!-- Filters -->
@@ -628,7 +798,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
         </div>
         <div class="search-wrap">
           <div class="s-ic">⌕</div>
-          <input class="hist-search" id="hist-q" placeholder="Search name, address, note…" oninput="renderHistory()" style="padding-left:32px"/>
+          <input class="hist-search" id="hist-q" placeholder="Search name, address, note, category…" oninput="renderHistory()" style="padding-left:32px"/>
         </div>
       </div>
 
@@ -644,8 +814,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
         <div id="hist-rows"></div>
       </div>
     </div>
-  </div><!-- /pg-history -->
-
+  </div>
 </div><!-- /pg-app -->
 
 <!-- ── SHARE MODAL ── -->
@@ -672,6 +841,14 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
       <div class="m-sub">Save a wallet address for quick payments.</div>
       <div class="m-row"><label>Name</label><input class="m-inp" id="nc-name" placeholder="e.g. Alice"/></div>
       <div class="m-row"><label>Wallet Address</label><input class="m-inp" id="nc-addr" placeholder="0x…"/></div>
+      <div class="m-row">
+        <label>Trust Level</label>
+        <div class="trust-row">
+          <div class="trust-opt on" data-t="trusted" onclick="pickTrust(this)">✓ Trusted</div>
+          <div class="trust-opt" data-t="unknown" onclick="pickTrust(this)">? Unknown</div>
+          <div class="trust-opt" data-t="flagged" onclick="pickTrust(this)">⚑ Flagged</div>
+        </div>
+      </div>
       <div class="m-foot">
         <button class="btn btn-ghost" onclick="closeModal('contact-modal')">Cancel</button>
         <button class="btn btn-teal" onclick="saveContact()">Save Contact</button>
@@ -680,17 +857,111 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff-b);min-height:10
   </div>
 </div>
 
+<!-- ── CONFIRM SEND MODAL ── -->
+<div id="confirm-modal" style="display:none">
+  <div class="overlay" onclick="closeModal('confirm-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="m-title">Confirm Transaction</div>
+      <div class="m-sub">Review the details before sending.</div>
+      <div class="confirm-section">
+        <div class="confirm-amt" id="conf-amt">—</div>
+        <div class="confirm-sym" id="conf-sym">RLP</div>
+        <div style="height:1px;background:var(--border);margin:12px 0"></div>
+        <div class="confirm-row">
+          <span class="confirm-label">To</span>
+          <span class="confirm-val" id="conf-to">—</span>
+        </div>
+        <div class="confirm-row" id="conf-note-row" style="display:none">
+          <span class="confirm-label">Note</span>
+          <span class="confirm-val" id="conf-note">—</span>
+        </div>
+        <div class="confirm-row" id="conf-cat-row" style="display:none">
+          <span class="confirm-label">Category</span>
+          <span class="confirm-val" id="conf-cat">—</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Est. gas</span>
+          <span class="confirm-val" id="conf-gas">~0.0001 ETH</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Balance after</span>
+          <span class="confirm-val" id="conf-after" style="color:var(--teal)">—</span>
+        </div>
+      </div>
+      <div class="confirm-warn" id="conf-warn"></div>
+      <div class="m-foot">
+        <button class="btn btn-ghost" onclick="closeModal('confirm-modal')">Cancel</button>
+        <button class="btn btn-teal" id="conf-send-btn" onclick="sendTokens()">Confirm Send →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SPLIT ADD CONTACT MODAL ── -->
+<div id="split-contact-modal" style="display:none">
+  <div class="overlay" onclick="closeModal('split-contact-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="m-title">Add to Split</div>
+      <div class="m-sub">Select a contact or enter an address to add to this bill split.</div>
+      <div id="split-contact-picker" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;margin-bottom:12px"></div>
+      <div class="or-div"><span class="or-text">or enter address</span></div>
+      <div class="m-row"><label>Name</label><input class="m-inp" id="split-nc-name" placeholder="e.g. Dave"/></div>
+      <div class="m-row"><label>Address</label><input class="m-inp" id="split-nc-addr" placeholder="0x…"/></div>
+      <div class="m-foot">
+        <button class="btn btn-ghost" onclick="closeModal('split-contact-modal')">Cancel</button>
+        <button class="btn btn-teal" onclick="addSplitRecipient()">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── RECEIPT MODAL ── -->
+<div id="receipt-modal" style="display:none">
+  <div class="overlay" onclick="closeModal('receipt-modal')">
+    <div onclick="event.stopPropagation()" style="width:420px;max-width:96vw;display:flex;flex-direction:column">
+      <!-- Receipt card — this is what gets captured as PNG -->
+      <div class="receipt-wrap" id="receipt-card">
+        <div class="receipt-header">
+          <div class="receipt-check-ring">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="receipt-sent-label">Payment Sent</div>
+          <div class="receipt-date-label" id="receipt-date">—</div>
+        </div>
+        <div class="receipt-amount-section">
+          <div class="receipt-notch l"></div>
+          <div class="receipt-notch r"></div>
+          <div class="receipt-amount-label">Amount</div>
+          <div class="receipt-big-amt" id="receipt-amount">—</div>
+          <div class="receipt-big-sym" id="receipt-sym-disp">RLP</div>
+        </div>
+        <div class="receipt-rows" id="receipt-details"></div>
+        <div class="receipt-footer">
+          <div class="receipt-footer-notch l"></div>
+          <div class="receipt-footer-notch r"></div>
+          <div class="receipt-brand-line">Rialo<span>Pay</span></div>
+          <div class="receipt-id-line" id="receipt-id">—</div>
+        </div>
+      </div>
+      <!-- Buttons outside receipt so they don't appear in PNG -->
+      <div class="receipt-actions">
+        <button class="btn btn-ghost" onclick="closeModal('receipt-modal')" style="flex:1;background:rgba(250,250,247,.92);border-color:rgba(216,211,200,.7)">Close</button>
+        <button class="btn btn-ghost" onclick="copyReceiptText()" style="flex:1;background:rgba(250,250,247,.92);border-color:rgba(216,211,200,.7)">⎘ Copy</button>
+        <button class="btn btn-teal" id="receipt-dl-btn" onclick="downloadReceiptPNG()" style="flex:1.4">⬇ PNG</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toasts"></div>
 
 <script>
-/* ═══════════════════════════════════════════
-   CONFIG
-═══════════════════════════════════════════ */
-const CONTRACT  = '0xE56dF58bAF963c57B871d364E971a9d0Ba0DC60d';
-const CHAIN_ID  = 84532;
-const RPC       = 'https://sepolia.base.org';
-const EXPLORER  = 'https://sepolia.basescan.org';
-const FB_URL    = 'https://rialo-pay-default-rtdb.firebaseio.com/transactions';
+/* ════════════════ CONFIG ════════════════ */
+const CONTRACT = '0xE56dF58bAF963c57B871d364E971a9d0Ba0DC60d';
+const CHAIN_ID = 84532;
+const RPC      = 'https://sepolia.base.org';
+const EXPLORER = 'https://sepolia.basescan.org';
+const FB_URL   = 'https://rialo-pay-default-rtdb.firebaseio.com/transactions';
 
 const ABI = [
   'function symbol() view returns (string)',
@@ -700,140 +971,115 @@ const ABI = [
   'function faucet() external',
   'event Transfer(address indexed from, address indexed to, uint256 value)',
 ];
-const LOGO = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAgESAAMAAAABAAEAAIdpAAQAAAABAAAAJgAAAAAAAqACAAQAAAABAAABkKADAAQAAAABAAABkAAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/+ICoElDQ19QUk9GSUxFAAEBAAACkGxjbXMEMAAAbW50clJHQiBYWVogAAAAAAAAAAAAAAAAYWNzcEFQUEwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPbWAAEAAAAA0y1sY21zAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALZGVzYwAAAQgAAAA4Y3BydAAAAUAAAABOd3RwdAAAAZAAAAAUY2hhZAAAAaQAAAAsclhZWgAAAdAAAAAUYlhZWgAAAeQAAAAUZ1hZWgAAAfgAAAAUclRSQwAAAgwAAAAgZ1RSQwAAAiwAAAAgYlRSQwAAAkwAAAAgY2hybQAAAmwAAAAkbWx1YwAAAAAAAAABAAAADGVuVVMAAAAcAAAAHABzAFIARwBCACAAYgB1AGkAbAB0AC0AaQBuAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAADIAAAAcAE4AbwAgAGMAbwBwAHkAcgBpAGcAaAB0ACwAIAB1AHMAZQAgAGYAcgBlAGUAbAB5AAAAAFhZWiAAAAAAAAD21gABAAAAANMtc2YzMgAAAAAAAQxKAAAF4///8yoAAAebAAD9h///+6L///2jAAAD2AAAwJRYWVogAAAAAAAAb5QAADjuAAADkFhZWiAAAAAAAAAknQAAD4MAALa+WFlaIAAAAAAAAGKlAAC3kAAAGN5wYXJhAAAAAAADAAAAAmZmAADypwAADVkAABPQAAAKW3BhcmEAAAAAAAMAAAACZmYAAPKnAAANWQAAE9AAAApbcGFyYQAAAAAAAwAAAAJmZgAA8qcAAA1ZAAAT0AAACltjaHJtAAAAAAADAAAAAKPXAABUewAATM0AAJmaAAAmZgAAD1z/wAARCAGQAZADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9sAQwAEBAQEBAQHBAQHCgcHBwoNCgoKCg0QDQ0NDQ0QFBAQEBAQEBQUFBQUFBQUGBgYGBgYHBwcHBwfHx8fHx8fHx8f/9sAQwEFBQUIBwgOBwcOIBYSFiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg/90ABAAZ/9oADAMBAAIRAxEAPwD7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9D7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9H7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9L7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo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jcFWVgCpUjBBB6girjNxE4pn4y0V6/8AGv4er8PfGUlpYrjT70faLXPO1ScNHn/YPH0IryCulO6uZBVm3vLu0O60mkhJ7oxU/pVaimB6DoXxV+InhyVZNM1q62qf9XNIZoz7bJcj8hX158LP2jdP8U3UOgeMI0sNQkIWKdDiCVuykHmNj25IJ7jgV8BUVMoJjTaP2eor52/Z2+I9x4y8NSaHrEvmajpIVS7HLSwHhGJ7sMFSfoTya+ia5WrOxqncKKKKQBRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB//9b7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD5f8A2qtHiu/BFjrIUebY3oUH0jnRgw/76VPyr4Br9Hf2mf8Akl03/X1B/wChGvzirppfCZy3CiiitCQooooA90/Zz1iXSvinY26sRHfxzW0g9RsLr/48gr9Kq/LX4JDPxV0H/r4P/otq/UqueruaQ2CiiisigooooAKKKKACiiigAooooAKKKKACiiigAooooA//1/saiiiuI2CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAPn79pn/kl03/X1B/6Ea/OKv0d/aZ/5JdN/19Qf+hGvzirppfCZz3CiiitCQooooA9V+CP/ACVbQf8Ar4P/AKLev1Jr8tvgj/yVbQf+vg/+i3r9Sa56u5pDYKKKKyKCiiigAooooAKKKKACiiigAooooAKKKKACiiigD//Q+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA+fv2mf+SXTf9fUH/oRr84q/R39pn/kl03/X1B/6Ea/OKuml8JnPcKKKK0JCiiigD1X4I/8AJVtB/wCvg/8Aot6/Umvy2+CP/JVtB/6+D/6Lev1Jrnq7mkNgooorIoKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/9H7GoooriNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD5+/aZ/5JdN/19Qf+hGvzir9Mv2htNk1H4U6mYgS1q0M+B6JKoY/gpJ/CvzNropfCZz3CiiitSQooooA9T+CRI+KugkDP+kH/ANAav1Lr8z/2d9Mk1H4rabIoylok1w/sBEyg/wDfTiv0wrnq7mkNgooorIoKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//S+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAo6pptprGmXOk3677e7ieGRfVJFKkfka/Jjxp4U1HwT4lu/DmpqfMtnIR8YEkZ5SQexGD7cjtX6615X8UvhRonxN0xY7k/ZtQtwfs90q5K/7Dj+JCe3UHkd86U58rFJXPy1or0Lxn8LvGvgW4ddbsXNuh4uoQXgYdjvA+X6Ng+1ee10J3Mgoq1Z2V5qNwlnp8L3EznCxxKXcn0Cjk19Z/Cr9m6/urmHXviHH5FshDJYE5eQ9R5uPur/s9T0OO6lJR3Glc7f9l/wHPo2i3HjTUkMc2qAR2wIwRbg5L/SRsfgoPevqqmRRxwxrDCoREAVVAwABwAB2FPrmk7u5qlYKKKKkAooooAKKKKACiiigAooooAKKKKACiiigAooooA//0/saiiiuI2CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAIBBBAIPBBrlbrwL4IvpTPe6Hp80hOS0lrC7E/UrXVUVQGbp2jaPo6GLSLOC0U9RBGkYP4KBWlRRUgFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf/U+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//V+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//W+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//X+xqKKK4jYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//Z';
-window.addEventListener('DOMContentLoaded', function() {
-  var logoEl1 = document.getElementById('home-logo-img');
-  var logoEl2 = document.getElementById('nav-logo-img');
-  if (logoEl1) logoEl1.src = LOGO;
-  if (logoEl2) logoEl2.src = LOGO;
-});
+
+/* ── Categories ── */
+const CATEGORIES = [
+  { id:'rent',      label:'🏠 Rent',      color:'#7C3AED', bg:'rgba(124,58,237,.1)' },
+  { id:'freelance', label:'💼 Freelance',  color:'#1D4ED8', bg:'rgba(29,78,216,.1)' },
+  { id:'food',      label:'🍔 Food',       color:'#B45309', bg:'rgba(180,83,9,.1)' },
+  { id:'utilities', label:'⚡ Utilities',  color:'#0F766E', bg:'rgba(15,118,110,.1)' },
+  { id:'transfer',  label:'💸 Transfer',   color:'#1B6B58', bg:'rgba(27,107,88,.1)' },
+  { id:'other',     label:'📦 Other',      color:'#6B7280', bg:'rgba(107,114,128,.1)' },
+];
 
 /* ── State ── */
 let provider=null, signer=null, userAddr=null;
 let rc=null, wc=null;
 let sym='RLP', dec=18;
-let txs=[], hFlt='all', hPeriod='all', pickedContact=null;
+let txs=[], hFlt='all', hPeriod='all', catFilter='all', pickedContact=null;
 let faucetCD=false, balTimer=null;
 let genLinkStr='', recFreq='weekly';
 let recurring = JSON.parse(localStorage.getItem('rp_recurring')||'[]');
+let selectedCat = '';
+let selectedTrust = 'trusted';
+let splitRecipients = [];
+let currentBalanceNum = 0;
+let pendingSend = null;
+let isDark = localStorage.getItem('rp_dark') === '1';
+let rlpUsdRate = 0.10; // Mock price — 1 RLP = $0.10 (testnet)
+let gasWidgetOpen = false;
+let gasTimer = null;
+let incomingTimer = null;
+let knownTxHashes = new Set();
+let batchRows = [];
+let batchCat = '';
+let selectedBatchContacts = [];
 
 let contacts = JSON.parse(localStorage.getItem('rp_contacts')||'null') || [
-  {name:'Alice', addr:'0xC3d152e8bF20b44fa831D0923e66E9b7eE194b4f', color:'#7C3AED'},
-  {name:'Bob',   addr:'0xA9e222F101c3a74F8b7E2d88c0b810cc107d10ab', color:'#1D4ED8'},
-  {name:'Carol', addr:'0xF01aee2c9b148E3c3a7F2d44E09A88a0038e3c4d', color:'#B45309'},
+  {name:'Alice', addr:'0xC3d152e8bF20b44fa831D0923e66E9b7eE194b4f', color:'#7C3AED', trust:'trusted'},
+  {name:'Bob',   addr:'0xA9e222F101c3a74F8b7E2d88c0b810cc107d10ab', color:'#1D4ED8', trust:'trusted'},
+  {name:'Carol', addr:'0xF01aee2c9b148E3c3a7F2d44E09A88a0038e3c4d', color:'#B45309', trust:'unknown'},
 ];
+
 function saveContacts(){ localStorage.setItem('rp_contacts', JSON.stringify(contacts)); }
 function saveRecurring(){ localStorage.setItem('rp_recurring', JSON.stringify(recurring)); }
 
-/* ═══════════════════════════════════════════
-   FIREBASE  (REST — no SDK needed)
-═══════════════════════════════════════════ */
+/* ════════════ DARK MODE ════════════ */
+function applyDark() {
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : '');
+  const btn = document.getElementById('dark-btn');
+  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+  localStorage.setItem('rp_dark', isDark ? '1' : '0');
+}
+function toggleDark() { isDark = !isDark; applyDark(); }
+applyDark();
 
-// Write a single transaction to Firebase
+/* ════════════ FIREBASE ════════════ */
 async function fbWrite(tx) {
   try {
-    const res = await fetch(`${FB_URL}.json`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tx)
-    });
-    const data = await res.json();
-    return data.name; // Firebase auto-generated key
-  } catch (e) {
-    console.warn('Firebase write failed:', e);
-    return null;
-  }
+    const res = await fetch(`${FB_URL}.json`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(tx) });
+    const d = await res.json(); return d.name;
+  } catch(e){ console.warn('Firebase write failed:',e); return null; }
 }
-
-// Read all transactions for this wallet from Firebase
 async function fbRead(walletAddr) {
   try {
-    // Query by wallet address (either sender or receiver)
     const res = await fetch(`${FB_URL}.json`);
     if (!res.ok) return [];
-    const data = await res.json();
-    if (!data) return [];
+    const data = await res.json(); if (!data) return [];
     const addr = walletAddr.toLowerCase();
-    // Flatten Firebase object into array, filter for this wallet
-    return Object.entries(data)
-      .map(([fbKey, tx]) => ({ ...tx, fbKey }))
-      .filter(tx =>
-        tx.from?.toLowerCase() === addr ||
-        tx.to?.toLowerCase() === addr
-      )
-      .sort((a, b) => (b.ts || 0) - (a.ts || 0));
-  } catch (e) {
-    console.warn('Firebase read failed:', e);
-    return [];
-  }
+    return Object.entries(data).map(([k,tx])=>({...tx,fbKey:k}))
+      .filter(tx => tx.from?.toLowerCase()===addr || tx.to?.toLowerCase()===addr)
+      .sort((a,b)=>(b.ts||0)-(a.ts||0));
+  } catch(e){ console.warn('Firebase read failed:',e); return []; }
 }
 
-// Delete a transaction from Firebase
-async function fbDelete(fbKey) {
-  try {
-    await fetch(`${FB_URL}/${fbKey}.json`, { method: 'DELETE' });
-  } catch (e) {
-    console.warn('Firebase delete failed:', e);
-  }
-}
-
-/* ═══════════════════════════════════════════
-   ROUTING
-═══════════════════════════════════════════ */
+/* ════════════ ROUTING ════════════ */
 function showSubPg(id, btn) {
-  document.querySelectorAll('.sub-pg').forEach(p => p.classList.remove('on'));
-  document.querySelectorAll('.pg-tab').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('.sub-pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.pg-tab').forEach(b=>b.classList.remove('on'));
   document.getElementById(id).classList.add('on');
   btn.classList.add('on');
-  if (id === 'pg-history') renderHistory();
+  if (id==='pg-history'){ renderHistory(); renderChart(); }
 }
 
-/* ═══════════════════════════════════════════
-   WALLET
-═══════════════════════════════════════════ */
+/* ════════════ WALLET ════════════ */
 async function connectWallet() {
-  if (typeof ethers === 'undefined') { toast('Loading error — please refresh the page', 'terr'); console.error('ethers not loaded'); return; }
-  if (!window.ethereum) { toast('Install MetaMask to continue', 'terr'); return; }
+  if (typeof ethers==='undefined'){ toast('Loading error — refresh the page','terr'); return; }
+  if (!window.ethereum){ toast('Install MetaMask to continue','terr'); return; }
   try {
-    toast('Connecting…', 'tinfo');
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    toast('Connecting…','tinfo');
+    await window.ethereum.request({method:'eth_requestAccounts'});
     provider = new ethers.BrowserProvider(window.ethereum);
     signer   = await provider.getSigner();
     userAddr = await signer.getAddress();
-
     const net = await provider.getNetwork();
-    if (Number(net.chainId) !== CHAIN_ID) {
-      document.getElementById('wrong-net').style.display = 'block';
-      try {
-        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x' + CHAIN_ID.toString(16) }] });
-        document.getElementById('wrong-net').style.display = 'none';
-      } catch {}
+    if (Number(net.chainId)!==CHAIN_ID) {
+      document.getElementById('wrong-net').style.display='block';
+      try { await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:'0x'+CHAIN_ID.toString(16)}]}); document.getElementById('wrong-net').style.display='none'; } catch{}
     }
-
-    const live = CONTRACT !== '0x0000000000000000000000000000000000000000';
-    if (live) {
-      // Use BrowserProvider for both read and write — most reliable since wallet is already connected
-      rc = new ethers.Contract(CONTRACT, ABI, provider);
-      wc = new ethers.Contract(CONTRACT, ABI, signer);
-      try {
-        // Try fetching token metadata — try each individually in case one fails
-        try { sym = await rc.symbol(); } catch (e) { console.warn('symbol() failed:', e?.message); }
-        try { const _d = await rc.decimals(); dec = Number(_d); } catch (e) { console.warn('decimals() failed, assuming 18:', e?.message); dec = 18; }
-        console.log('[token] symbol:', sym, '| decimals:', dec);
-      } catch (e) {
-        console.warn('Token metadata error:', e);
-        dec = 18; // safe default
-      }
+    if (CONTRACT!=='0x0000000000000000000000000000000000000000') {
+      rc = new ethers.Contract(CONTRACT,ABI,provider);
+      wc = new ethers.Contract(CONTRACT,ABI,signer);
+      try { sym = await rc.symbol(); } catch{}
+      try { const d=await rc.decimals(); dec=Number(d); } catch{ dec=18; }
     }
-
     enterApp();
     await Promise.all([fetchBalance(), loadTxsFromFirebase()]);
-    clearInterval(balTimer);
-    balTimer = setInterval(fetchBalance, 15000);
-    window.ethereum.on('accountsChanged', () => location.reload());
-    window.ethereum.on('chainChanged',    () => location.reload());
-    toast('Wallet connected!', 'tok');
-  } catch (e) { toast(e.message?.slice(0, 60) || 'Failed', 'terr'); }
+    clearInterval(balTimer); balTimer=setInterval(fetchBalance,15000);
+    window.ethereum.on('accountsChanged',()=>location.reload());
+    window.ethereum.on('chainChanged',()=>location.reload());
+    toast('Wallet connected!','tok');
+  } catch(e){ toast(e.message?.slice(0,60)||'Failed','terr'); }
 }
 
 function enterApp() {
@@ -842,448 +1088,587 @@ function enterApp() {
   document.getElementById('tn-right').innerHTML = `
     <div class="net-pill"><div class="dot"></div><span>Base Sepolia</span></div>
     <div class="wchip">
-      <button class="wpart" onclick="copyAddr()" title="Copy"><div class="dot"></div>${short(userAddr)}</button>
+      <button class="wpart" onclick="copyAddr()"><div class="dot"></div>${short(userAddr)}</button>
       <div class="wdiv"></div>
       <button class="wpart disc" onclick="disconnectWallet()">✕</button>
-    </div>`;
-  setEl('bal-sym', sym);
-  setEl('send-sym', sym);
-  setEl('send-sym-lbl', sym);
-  setEl('bc-addr', short(userAddr));
-  setEl('recv-addr', userAddr);
+    </div>
+    <button class="dark-toggle" onclick="toggleDark()" id="dark-btn2" title="Toggle dark mode">${isDark?'☀️':'🌙'}</button>`;
+  setEl('bal-sym',sym); setEl('send-sym',sym); setEl('send-sym-lbl',sym);
+  setEl('bc-addr',short(userAddr)); setEl('recv-addr',userAddr);
   document.getElementById('share-addr').textContent = userAddr;
-  buildQR('qr-el', userAddr, 148);
-  buildQR('share-qr', userAddr, 176);
-  renderContacts();
-  renderContactsFull();
-  renderRecurring();
-  // show debug button
-  var dbg = document.getElementById('dbg-toggle'); if(dbg) dbg.style.display='block';
+  buildQR('qr-el',userAddr,148); buildQR('share-qr',userAddr,176);
+  buildCatGrid(); renderContacts(); renderContactsFull(); renderRecurring();
+  buildCatFilters(); buildBatchCatGrid();
+  const m = new Date(); setEl('mc-month-label', m.toLocaleString('default',{month:'long',year:'numeric'}));
+  // Start new features
+  document.getElementById('gas-widget').style.display = 'block';
+  fetchGasPrice(); gasTimer = setInterval(fetchGasPrice, 30000);
+  fetchRLPPrice(); setInterval(fetchRLPPrice, 60000);
+  startIncomingPoller();
+  addBatchRow(); addBatchRow(); // start batch with 2 empty rows
 }
 
 function disconnectWallet() {
-  clearInterval(balTimer);
-  provider = signer = userAddr = rc = wc = null;
-  txs = [];
+  clearInterval(balTimer); clearInterval(gasTimer); clearInterval(incomingTimer);
+  provider=signer=userAddr=rc=wc=null; txs=[]; knownTxHashes.clear();
   document.getElementById('pg-app').classList.remove('on');
   document.getElementById('pg-home').classList.add('on');
-  document.getElementById('wrong-net').style.display = 'none';
+  document.getElementById('wrong-net').style.display='none';
+  document.getElementById('gas-widget').style.display='none';
 }
 
-/* ═══════════════════════════════════════════
-   BALANCE
-═══════════════════════════════════════════ */
+/* ════════════ BALANCE ════════════ */
 async function fetchBalance() {
-  if (!userAddr || !provider) return;
-
+  if (!userAddr||!provider) return;
   try {
-    // Use raw eth_call — most reliable, bypasses all ABI issues
     const iface = new ethers.Interface(['function balanceOf(address) view returns (uint256)']);
-    const data  = iface.encodeFunctionData('balanceOf', [userAddr]);
-    const result = await provider.send('eth_call', [{ to: CONTRACT, data }, 'latest']);
-
-    if (!result || result === '0x') {
-      showBalance('—');
-      return;
-    }
-
+    const data  = iface.encodeFunctionData('balanceOf',[userAddr]);
+    const result = await provider.send('eth_call',[{to:CONTRACT,data},'latest']);
+    if (!result||result==='0x'){ showBalance('—'); return; }
     const raw = ethers.toBigInt(result);
-    // Try with stored dec first, then 18, then 6, then 0
-    const decimalsToTry = [dec, 18, 6, 0].filter((v,i,a) => a.indexOf(v) === i);
+    const decimalsToTry=[dec,18,6,0].filter((v,i,a)=>a.indexOf(v)===i);
     for (const d of decimalsToTry) {
-      const f = parseFloat(ethers.formatUnits(raw, d));
-      if (f > 0 || d === 0) {
-        dec = d; // lock in the working decimals
-        showBalance(f.toLocaleString('en-US', { maximumFractionDigits: 2 }));
-        return;
-      }
+      const f=parseFloat(ethers.formatUnits(raw,d));
+      if (f>0||d===0){ dec=d; currentBalanceNum=f; showBalance(f.toLocaleString('en-US',{maximumFractionDigits:2})); return; }
     }
-    showBalance('0');
-  } catch (e) {
-    console.error('fetchBalance error:', e);
+    showBalance('0'); currentBalanceNum=0;
+  } catch(e){ console.error('fetchBalance error:',e); }
+}
+function showBalance(val){ 
+  const el=document.getElementById('bal-val'); if(el) el.textContent=val;
+  const usdEl=document.getElementById('bal-usd');
+  if(usdEl){ 
+    if(typeof val==='string'&&val==='—'){ usdEl.textContent='—'; return; }
+    const num=parseFloat(String(val).replace(/,/g,''));
+    if(!isNaN(num)&&rlpUsdRate>0){ usdEl.textContent=(num*rlpUsdRate).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   }
 }
 
-function showBalance(val) {
-  const el = document.getElementById('bal-val');
-  if (el) el.textContent = val;
-}
-
-/* ═══════════════════════════════════════════
-   LOAD TXS FROM FIREBASE
-═══════════════════════════════════════════ */
+/* ════════════ FIREBASE LOAD ════════════ */
 async function loadTxsFromFirebase() {
   setHistLoading(true);
-  toast('Loading transaction history…', 'tinfo');
   try {
-    const data = await fbRead(userAddr);
-    txs = data;
-    updateHistSummary();
-    renderHistory();
-    if (txs.length === 0) {
-      // Also try fetching on-chain events if contract is live
-      if (rc) await fetchOnChainTxs();
-    }
-  } catch (e) {
-    console.warn('Failed to load from Firebase:', e);
-    txs = [];
-    updateHistSummary();
-    renderHistory();
-  } finally {
-    setHistLoading(false);
-  }
+    txs = await fbRead(userAddr);
+    updateHistSummary(); renderHistory(); renderChart(); renderMonthlySummary();
+    if (txs.length===0&&rc) await fetchOnChainTxs();
+  } catch(e){ txs=[]; updateHistSummary(); renderHistory(); }
+  finally { setHistLoading(false); }
 }
-
-function setHistLoading(loading) {
-  const el = document.getElementById('hist-rows');
-  if (!el) return;
-  if (loading) {
-    el.innerHTML = `<div class="tx-empty">
-      <div style="font-size:24px;opacity:.4;margin-bottom:10px;animation:spin .8s linear infinite;display:inline-block">↻</div>
-      <div class="tx-empty-t">Loading from Firebase…</div>
-      <div class="tx-empty-s">Fetching your transaction history</div>
-    </div>`;
-  }
+function setHistLoading(l){
+  const el=document.getElementById('hist-rows'); if(!el||!l) return;
+  el.innerHTML=`<div class="tx-empty"><div style="font-size:24px;opacity:.4;margin-bottom:10px;animation:spin .8s linear infinite;display:inline-block">↻</div><div class="tx-empty-t">Loading…</div></div>`;
 }
-
-// Fetch on-chain events and write to Firebase (runs once when wallet first connects and Firebase is empty)
 async function fetchOnChainTxs() {
-  if (!rc || !userAddr) return;
+  if (!rc||!userAddr) return;
   try {
-    const rp = new ethers.JsonRpcProvider(RPC);
-    const c  = new ethers.Contract(CONTRACT, ABI, rp);
-    const latest  = await rp.getBlockNumber();
-    const fromBlk = Math.max(0, latest - 80000);
-    const [sent, recv] = await Promise.all([
-      c.queryFilter(c.filters.Transfer(userAddr, null), fromBlk, 'latest'),
-      c.queryFilter(c.filters.Transfer(null, userAddr), fromBlk, 'latest'),
-    ]);
-    const all = [...sent, ...recv].map(e => ({
-      hash:   e.transactionHash,
-      from:   e.args[0],
-      to:     e.args[1],
-      amount: ethers.formatUnits(e.args[2], dec),
-      dir:    e.args[0].toLowerCase() === userAddr.toLowerCase() ? 'out' : 'in',
-      status: 'confirmed',
-      ts:     Date.now(),
-      block:  e.blockNumber,
-      note:   '',
-    }));
-    all.sort((a, b) => b.block - a.block);
-    // Write each to Firebase
-    for (const tx of all.slice(0, 40)) {
-      const fbKey = await fbWrite(tx);
-      if (fbKey) tx.fbKey = fbKey;
-    }
-    txs = all.slice(0, 40);
-    updateHistSummary();
-    renderHistory();
-  } catch {}
+    const rp=new ethers.JsonRpcProvider(RPC); const c=new ethers.Contract(CONTRACT,ABI,rp);
+    const latest=await rp.getBlockNumber(); const fromBlk=Math.max(0,latest-80000);
+    const [sent,recv]=await Promise.all([c.queryFilter(c.filters.Transfer(userAddr,null),fromBlk,'latest'),c.queryFilter(c.filters.Transfer(null,userAddr),fromBlk,'latest')]);
+    const all=[...sent,...recv].map(e=>({hash:e.transactionHash,from:e.args[0],to:e.args[1],amount:ethers.formatUnits(e.args[2],dec),dir:e.args[0].toLowerCase()===userAddr.toLowerCase()?'out':'in',status:'confirmed',ts:Date.now(),block:e.blockNumber,note:'',category:''}));
+    all.sort((a,b)=>b.block-a.block);
+    for (const tx of all.slice(0,40)){ const k=await fbWrite(tx); if(k) tx.fbKey=k; }
+    txs=all.slice(0,40); updateHistSummary(); renderHistory(); renderChart(); renderMonthlySummary();
+  } catch{}
 }
 
-/* ═══════════════════════════════════════════
-   SEND
-═══════════════════════════════════════════ */
-function renderContacts() {
-  const el = document.getElementById('contact-list');
-  if (!contacts.length) { el.innerHTML = '<div style="font-family:var(--ff-m);font-size:12px;color:var(--ink4);padding:8px 0">No contacts — add one below</div>'; return; }
-  el.innerHTML = contacts.map((c, i) => `
-    <div class="c-row ${pickedContact === i ? 'picked' : ''}" onclick="pickContact(${i})">
+/* ════════════ MONTHLY SUMMARY ════════════ */
+function renderMonthlySummary() {
+  const card=document.getElementById('monthly-card'); if(!txs.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  const now=new Date(); const m=now.getMonth(); const y=now.getFullYear();
+  const monthly=txs.filter(t=>{const d=new Date(t.ts);return d.getMonth()===m&&d.getFullYear()===y;});
+  const mIn=monthly.filter(t=>t.dir==='in').reduce((s,t)=>s+parseFloat(t.amount||0),0);
+  const mOut=monthly.filter(t=>t.dir==='out').reduce((s,t)=>s+parseFloat(t.amount||0),0);
+  setEl('mc-in', fmt(mIn)+' '+sym); setEl('mc-out', fmt(mOut)+' '+sym);
+  const catTotals={};
+  monthly.filter(t=>t.dir==='out'&&t.category).forEach(t=>{
+    catTotals[t.category]=(catTotals[t.category]||0)+parseFloat(t.amount||0);
+  });
+  const el=document.getElementById('mc-cats');
+  const sorted=Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  if (!sorted.length){ el.innerHTML='<div style="font-family:var(--ff-m);font-size:11px;color:var(--ink4)">No categorized spending yet</div>'; return; }
+  el.innerHTML=sorted.map(([id,amt])=>{
+    const cat=CATEGORIES.find(c=>c.id===id)||{label:id,color:'#888'};
+    return `<div class="mc-cat-row"><div class="mc-cat-dot" style="background:${cat.color}"></div><div class="mc-cat-name">${cat.label}</div><div class="mc-cat-amt">${fmt(amt)} ${sym}</div></div>`;
+  }).join('');
+}
+
+/* ════════════ CATEGORY UI ════════════ */
+function buildCatGrid() {
+  const el=document.getElementById('send-cat-grid');
+  el.innerHTML=CATEGORIES.map(c=>`<div class="cat-chip" data-cid="${c.id}" onclick="pickCat(this,'${c.id}')">${c.label}</div>`).join('');
+}
+function pickCat(el,id) {
+  document.querySelectorAll('.cat-chip').forEach(c=>c.classList.remove('on'));
+  if (selectedCat===id){ 
+    selectedCat=''; 
+  } else { 
+    el.classList.add('on'); 
+    selectedCat=id; 
+  }
+  // Show/hide "other" label field
+  const wrap = document.getElementById('other-label-wrap');
+  const inp  = document.getElementById('other-label');
+  if (wrap) {
+    if (selectedCat === 'other') {
+      wrap.style.display = 'block';
+      setTimeout(()=>inp&&inp.focus(), 50);
+    } else {
+      wrap.style.display = 'none';
+      if (inp) inp.value = '';
+    }
+  }
+}
+
+function syncOtherLabel() {
+  // Mirror the "other" label into the note field if note is empty
+  const lbl  = (document.getElementById('other-label')?.value || '').trim();
+  const note = document.getElementById('send-note');
+  if (note && !note.dataset.userEdited) {
+    note.value = lbl;
+  }
+}
+function buildCatFilters() {
+  const row=document.getElementById('cat-filter-row');
+  const existing=row.querySelector('[data-c="all"]');
+  if (!existing) { row.innerHTML=`<div class="cat-filter on" data-c="all" onclick="setCatFilter(this,'all')">All categories</div>`; }
+  CATEGORIES.forEach(c=>{
+    if (!row.querySelector(`[data-c="${c.id}"]`)){
+      const d=document.createElement('div');
+      d.className='cat-filter'; d.dataset.c=c.id;
+      d.innerHTML=c.label; d.onclick=()=>setCatFilter(d,c.id);
+      row.appendChild(d);
+    }
+  });
+}
+function setCatFilter(btn,id){ catFilter=id; document.querySelectorAll('.cat-filter').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); renderHistory(); }
+
+/* ════════════ TRUST / ADDRESS LOOKUP ════════════ */
+function onAddrInput() {
+  const val=document.getElementById('to-addr').value.trim();
+  const ind=document.getElementById('trust-indicator');
+  if (!val||val.length<10){ ind.style.display='none'; return; }
+  const c=contacts.find(x=>x.addr?.toLowerCase()===val.toLowerCase());
+  ind.style.display='block';
+  if (c) {
+    const trustMap={trusted:{cls:'trust-trusted',icon:'✓',label:'Trusted contact'},unknown:{cls:'trust-unknown',icon:'?',label:'Unknown trust'},flagged:{cls:'trust-flagged',icon:'⚑',label:'Flagged address'}};
+    const t=trustMap[c.trust||'trusted'];
+    ind.innerHTML=`<span class="trust-badge ${t.cls}">${t.icon} ${c.name} — ${t.label}</span>`;
+  } else if (ethers.isAddress(val)){
+    ind.innerHTML=`<span class="trust-badge trust-unknown">? Unknown address — not in your contacts</span>`;
+  } else {
+    ind.innerHTML=`<span class="trust-badge trust-flagged">✕ Invalid address format</span>`;
+  }
+  updateSimulation();
+}
+
+/* ════════════ SIMULATION ════════════ */
+function updateSimulation() {
+  const to=document.getElementById('to-addr').value.trim();
+  const amt=parseFloat(document.getElementById('send-amt').value)||0;
+  const box=document.getElementById('sim-box');
+  if (!amt||amt<=0||!to||!ethers.isAddress(to)){ box.classList.remove('show'); return; }
+  box.classList.add('show');
+  const after=currentBalanceNum-amt;
+  setEl('sim-amount', `${amt.toLocaleString()} ${sym}`);
+  setEl('sim-balance', `${currentBalanceNum.toLocaleString('en-US',{maximumFractionDigits:2})} ${sym}`);
+  const afterEl=document.getElementById('sim-after');
+  if (after<0){ afterEl.textContent='⚠ Insufficient balance'; afterEl.className='sim-result-val'; afterEl.style.color='var(--red)'; }
+  else { afterEl.textContent=`${after.toLocaleString('en-US',{maximumFractionDigits:2})} ${sym}`; afterEl.className='sim-result-val'; afterEl.style.color='var(--teal)'; }
+}
+
+/* ════════════ CONFIRM MODAL ════════════ */
+function openConfirmModal() {
+  const to  = document.getElementById('to-addr').value.trim();
+  const amt = document.getElementById('send-amt').value.trim();
+  const note= document.getElementById('send-note').value.trim();
+  if (!to||!ethers.isAddress(to)){ toast('Enter a valid recipient address','terr'); return; }
+  if (!amt||parseFloat(amt)<=0){ toast('Enter an amount greater than 0','terr'); return; }
+  if (!wc){ toast('Deploy the contract first','terr'); return; }
+
+  const amtNum=parseFloat(amt);
+  const after=currentBalanceNum-amtNum;
+  const contactName=cName(to);
+  const contact=contacts.find(c=>c.addr?.toLowerCase()===to.toLowerCase());
+
+  setEl('conf-amt', amtNum.toLocaleString());
+  setEl('conf-sym', sym);
+  setEl('conf-to', contactName ? `${contactName} (${short(to)})` : short(to));
+  setEl('conf-after', after>=0 ? `${after.toLocaleString('en-US',{maximumFractionDigits:2})} ${sym}` : '⚠ Insufficient balance');
+  document.getElementById('conf-after').style.color = after<0 ? 'var(--red)' : 'var(--teal)';
+  const noteRow=document.getElementById('conf-note-row');
+  if (note){ noteRow.style.display='flex'; setEl('conf-note',note); } else { noteRow.style.display='none'; }
+  const catRow=document.getElementById('conf-cat-row');
+  if (selectedCat){ 
+    const c=CATEGORIES.find(x=>x.id===selectedCat); 
+    const otherLbl = selectedCat==='other' ? (document.getElementById('other-label')?.value.trim()||'') : '';
+    const catDisplay = otherLbl ? `📦 ${otherLbl}` : (c?c.label:selectedCat);
+    catRow.style.display='flex'; setEl('conf-cat', catDisplay); 
+  } else { catRow.style.display='none'; }
+
+  const warn=document.getElementById('conf-warn');
+  const warnings=[];
+  if (after<0) warnings.push('⚠ Insufficient balance — this transaction will fail.');
+  if (contact?.trust==='flagged') warnings.push('⚑ This address is flagged in your contacts.');
+  if (!contact) warnings.push('? This address is not in your contacts.');
+  if (warnings.length){ warn.innerHTML=warnings.join('<br>'); warn.classList.add('show'); } else { warn.classList.remove('show'); }
+
+  const otherLabel = selectedCat==='other' ? (document.getElementById('other-label')?.value.trim()||'') : '';
+  pendingSend={to,amt,note,category:selectedCat,otherLabel};
+  document.getElementById('confirm-modal').style.display='block';
+}
+
+/* ════════════ SEND ════════════ */
+async function sendTokens() {
+  if (!pendingSend) return;
+  const {to,amt,note,category,otherLabel}=pendingSend;
+  const btn=document.getElementById('conf-send-btn');
+  btn.disabled=true; btn.textContent='Sending…';
+  toast('Submitting transaction…','tinfo');
+  try {
+    const wei=ethers.parseUnits(amt,dec);
+    const tx=await wc.transfer(to,wei);
+    await tx.wait();
+    const finalNote = note || (category==='other' && otherLabel ? otherLabel : '');
+    const txRecord={hash:tx.hash,from:userAddr,to,amount:amt,dir:'out',status:'confirmed',ts:Date.now(),note:finalNote,category,otherLabel:otherLabel||''};
+    const fbKey=await fbWrite(txRecord); if(fbKey) txRecord.fbKey=fbKey;
+    txs.unshift(txRecord);
+    await fetchBalance();
+    document.getElementById('to-addr').value=''; document.getElementById('send-amt').value='';
+    document.getElementById('send-note').value=''; 
+    document.getElementById('send-note').dataset.userEdited='';
+    document.getElementById('trust-indicator').style.display='none';
+    document.getElementById('sim-box').classList.remove('show');
+    const otherWrap = document.getElementById('other-label-wrap');
+    const otherInp  = document.getElementById('other-label');
+    if (otherWrap) otherWrap.style.display='none';
+    if (otherInp)  otherInp.value='';
+    pickedContact=null; selectedCat=''; renderContacts();
+    document.querySelectorAll('.qa,.cat-chip').forEach(q=>q.classList.remove('on'));
+    updateHistSummary(); renderMonthlySummary(); pendingSend=null;
+    closeModal('confirm-modal');
+    toast(`${parseFloat(amt).toLocaleString()} ${sym} sent!`,'tok');
+    setTimeout(()=>showReceipt(txRecord), 300);
+  } catch(e){ toast((e?.reason||e?.message||'Failed').slice(0,60),'terr'); }
+  finally { btn.disabled=false; btn.textContent='Confirm Send →'; }
+}
+
+/* ════════════ SPLIT BILL ════════════ */
+function openSplitAddContact(){
+  const el=document.getElementById('split-contact-picker');
+  el.innerHTML=contacts.map((c,i)=>`
+    <div class="c-row" onclick="addSplitFromContact(${i});closeModal('split-contact-modal')">
       <div class="c-ava" style="background:${c.color}20;color:${c.color}">${c.name.slice(0,2).toUpperCase()}</div>
       <div class="c-info"><div class="c-name">${c.name}</div><div class="c-addr">${short(c.addr)}</div></div>
     </div>`).join('');
+  document.getElementById('split-nc-name').value=''; document.getElementById('split-nc-addr').value='';
+  document.getElementById('split-contact-modal').style.display='block';
+}
+function addSplitFromContact(i){
+  const c=contacts[i];
+  if (splitRecipients.find(r=>r.addr===c.addr)){ toast('Already added','terr'); return; }
+  splitRecipients.push({name:c.name,addr:c.addr,color:c.color});
+  recalcSplit(); renderSplitRecipients();
+}
+function addSplitRecipient(){
+  const name=document.getElementById('split-nc-name').value.trim();
+  const addr=document.getElementById('split-nc-addr').value.trim();
+  if (!name){ toast('Enter a name','terr'); return; }
+  if (!ethers.isAddress(addr)){ toast('Invalid address','terr'); return; }
+  if (splitRecipients.find(r=>r.addr===addr)){ toast('Already added','terr'); return; }
+  splitRecipients.push({name,addr,color:'#1B6B58'});
+  recalcSplit(); renderSplitRecipients();
+  closeModal('split-contact-modal');
+}
+function removeSplitRecipient(i){ splitRecipients.splice(i,1); recalcSplit(); renderSplitRecipients(); }
+function recalcSplit(){
+  const total=parseFloat(document.getElementById('split-total').value)||0;
+  const n=splitRecipients.length;
+  const per=n>0?total/n:0;
+  splitRecipients.forEach(r=>r.amount=per);
+  const summary=document.getElementById('split-summary');
+  const sendBtn=document.getElementById('split-send-btn');
+  if (n>0&&total>0){ summary.style.display='flex'; setEl('split-per',`${per.toFixed(4)} ${sym}`); setEl('split-total-disp',`${total} ${sym}`); sendBtn.disabled=false; sendBtn.style.opacity='1'; }
+  else { summary.style.display='none'; sendBtn.disabled=true; sendBtn.style.opacity='.4'; }
+  renderSplitRecipients();
+}
+function renderSplitRecipients(){
+  const el=document.getElementById('split-recipients');
+  if (!splitRecipients.length){ el.innerHTML='<div style="font-family:var(--ff-m);font-size:12px;color:var(--ink4);padding:8px 0">No recipients yet</div>'; return; }
+  el.innerHTML=splitRecipients.map((r,i)=>`
+    <div class="split-recipient-row">
+      <div class="c-ava" style="background:${r.color}20;color:${r.color};width:30px;height:30px;font-size:11px">${r.name.slice(0,2).toUpperCase()}</div>
+      <div class="split-r-info"><div class="split-r-name">${r.name}</div><div class="split-r-addr">${short(r.addr)}</div></div>
+      <div class="split-r-amt">${r.amount?r.amount.toFixed(4):0} ${sym}</div>
+      <button class="split-r-remove" onclick="removeSplitRecipient(${i})">✕</button>
+    </div>`).join('');
+}
+async function sendSplitPayments(){
+  if (!wc){ toast('Wallet not connected','terr'); return; }
+  if (!splitRecipients.length){ toast('Add at least one recipient','terr'); return; }
+  const total=parseFloat(document.getElementById('split-total').value);
+  if (!total||total<=0){ toast('Enter a bill amount','terr'); return; }
+  const statusEl=document.getElementById('split-status');
+  statusEl.innerHTML='';
+  for (let i=0;i<splitRecipients.length;i++){
+    const r=splitRecipients[i];
+    const statusDiv=document.createElement('div');
+    statusDiv.style.cssText='font-family:var(--ff-m);font-size:11px;color:var(--ink3);padding:5px 0;display:flex;align-items:center;gap:6px';
+    statusDiv.innerHTML=`<span style="animation:spin .7s linear infinite;display:inline-block">↻</span> Sending to ${r.name}…`;
+    statusEl.appendChild(statusDiv);
+    try {
+      const wei=ethers.parseUnits(r.amount.toFixed(dec>6?6:dec),dec);
+      const tx=await wc.transfer(r.addr,wei);
+      await tx.wait();
+      const record={hash:tx.hash,from:userAddr,to:r.addr,amount:r.amount.toFixed(6),dir:'out',status:'confirmed',ts:Date.now(),note:`Split bill`,category:'transfer'};
+      const k=await fbWrite(record); if(k) record.fbKey=k; txs.unshift(record);
+      statusDiv.innerHTML=`<span style="color:var(--teal)">✓</span> Sent ${r.amount.toFixed(4)} ${sym} to ${r.name}`;
+    } catch(e){
+      statusDiv.innerHTML=`<span style="color:var(--red)">✕</span> Failed for ${r.name}: ${(e?.reason||'Error').slice(0,40)}`;
+    }
+  }
+  await fetchBalance(); updateHistSummary();
+  splitRecipients=[]; document.getElementById('split-total').value='';
+  recalcSplit(); renderSplitRecipients();
+  toast('Split payments complete!','tok');
 }
 
-function renderContactsFull() {
-  const el = document.getElementById('contacts-full-list');
-  if (!contacts.length) { el.innerHTML = '<div style="font-family:var(--ff-m);font-size:12px;color:var(--ink4);padding:12px 0;text-align:center">No contacts yet</div>'; return; }
-  el.innerHTML = contacts.map((c, i) => `
+/* ════════════ CONTACTS ════════════ */
+function renderContacts(){
+  const el=document.getElementById('contact-list');
+  if (!contacts.length){ el.innerHTML='<div style="font-family:var(--ff-m);font-size:12px;color:var(--ink4);padding:8px 0">No contacts — add one below</div>'; return; }
+  el.innerHTML=contacts.map((c,i)=>`
+    <div class="c-row ${pickedContact===i?'picked':''}" onclick="pickContact(${i})">
+      <div class="c-ava" style="background:${c.color}20;color:${c.color}">${c.name.slice(0,2).toUpperCase()}</div>
+      <div class="c-info"><div class="c-name">${c.name}</div><div class="c-addr">${short(c.addr)}</div></div>
+      ${trustChip(c.trust)}
+    </div>`).join('');
+}
+function trustChip(trust){
+  const map={trusted:'<span class="trust-badge trust-trusted" style="padding:1px 5px;font-size:9px">✓</span>',unknown:'<span class="trust-badge trust-unknown" style="padding:1px 5px;font-size:9px">?</span>',flagged:'<span class="trust-badge trust-flagged" style="padding:1px 5px;font-size:9px">⚑</span>'};
+  return map[trust||'unknown']||'';
+}
+function renderContactsFull(){
+  const el=document.getElementById('contacts-full-list');
+  if (!contacts.length){ el.innerHTML='<div style="font-family:var(--ff-m);font-size:12px;color:var(--ink4);padding:12px 0;text-align:center">No contacts yet</div>'; return; }
+  el.innerHTML=contacts.map((c,i)=>`
     <div style="display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:var(--r);background:var(--card2);border:1px solid var(--border)">
       <div class="c-ava" style="background:${c.color}20;color:${c.color};width:36px;height:36px;font-size:12px">${c.name.slice(0,2).toUpperCase()}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:500">${c.name}</div>
+        <div style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px">${c.name}${trustChip(c.trust)}</div>
         <div style="font-family:var(--ff-m);font-size:11px;color:var(--ink4);margin-top:2px">${c.addr}</div>
       </div>
       <button onclick="deleteContact(${i})" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;font-family:var(--ff-m);font-size:10px;color:var(--ink4);cursor:pointer;transition:.15s" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(153,27,27,.3)'" onmouseout="this.style.color='var(--ink4)';this.style.borderColor='var(--border)'">Remove</button>
     </div>`).join('');
 }
-
-function pickContact(i) {
-  pickedContact = i;
-  document.getElementById('to-addr').value = contacts[i].addr;
-  renderContacts();
-}
-
-function openAddContact() { document.getElementById('contact-modal').style.display = 'block'; }
-
-function saveContact() {
-  const name = document.getElementById('nc-name').value.trim();
-  const a    = document.getElementById('nc-addr').value.trim();
-  if (!name || !a) { toast('Fill in both fields', 'terr'); return; }
-  if (!ethers.isAddress(a)) { toast('Invalid address', 'terr'); return; }
-  const colors = ['#7C3AED','#1D4ED8','#1B6B58','#B45309','#991B1B','#0F766E','#4338CA'];
-  contacts.push({ name, addr: a, color: colors[contacts.length % colors.length] });
+function pickContact(i){ pickedContact=i; document.getElementById('to-addr').value=contacts[i].addr; onAddrInput(); renderContacts(); }
+function openAddContact(){ selectedTrust='trusted'; document.getElementById('contact-modal').style.display='block'; document.querySelectorAll('.trust-opt').forEach(o=>{o.classList.toggle('on',o.dataset.t==='trusted');}); }
+function pickTrust(el){ selectedTrust=el.dataset.t; document.querySelectorAll('.trust-opt').forEach(o=>o.classList.remove('on')); el.classList.add('on'); }
+function saveContact(){
+  const name=document.getElementById('nc-name').value.trim();
+  const a=document.getElementById('nc-addr').value.trim();
+  if (!name||!a){ toast('Fill in both fields','terr'); return; }
+  if (!ethers.isAddress(a)){ toast('Invalid address','terr'); return; }
+  const colors=['#7C3AED','#1D4ED8','#1B6B58','#B45309','#991B1B','#0F766E','#4338CA'];
+  contacts.push({name,addr:a,color:colors[contacts.length%colors.length],trust:selectedTrust});
   saveContacts(); renderContacts(); renderContactsFull();
-  closeModal('contact-modal');
-  document.getElementById('nc-name').value = '';
-  document.getElementById('nc-addr').value = '';
-  toast(`${name} added`, 'tok');
+  closeModal('contact-modal'); document.getElementById('nc-name').value=''; document.getElementById('nc-addr').value='';
+  toast(`${name} added`,'tok');
 }
+function deleteContact(i){ const n=contacts[i].name; contacts.splice(i,1); saveContacts(); renderContacts(); renderContactsFull(); toast(`${n} removed`,'tok'); }
 
-function deleteContact(i) {
-  const name = contacts[i].name;
-  contacts.splice(i, 1); saveContacts();
-  renderContacts(); renderContactsFull();
-  toast(`${name} removed`, 'tok');
-}
-
-async function sendTokens() {
-  const to   = document.getElementById('to-addr').value.trim();
-  const amt  = document.getElementById('send-amt').value.trim();
-  const note = document.getElementById('send-note').value.trim();
-  if (!to || !ethers.isAddress(to)) { toast('Enter a valid recipient address', 'terr'); return; }
-  if (!amt || parseFloat(amt) <= 0) { toast('Enter an amount greater than 0', 'terr'); return; }
-  if (!wc) { toast('Deploy the contract first (update CONFIG)', 'terr'); return; }
-
-  const btn = document.getElementById('send-btn');
-  btn.disabled = true; btn.textContent = 'Sending…';
-  toast('Submitting transaction…', 'tinfo');
-
-  try {
-    const wei = ethers.parseUnits(amt, dec);
-    const tx  = await wc.transfer(to, wei);
-    await tx.wait();
-
-    const txRecord = {
-      hash:   tx.hash,
-      from:   userAddr,
-      to,
-      amount: amt,
-      dir:    'out',
-      status: 'confirmed',
-      ts:     Date.now(),
-      note,
-    };
-
-    // Save to Firebase
-    const fbKey = await fbWrite(txRecord);
-    if (fbKey) txRecord.fbKey = fbKey;
-
-    txs.unshift(txRecord);
-    await fetchBalance();
-    document.getElementById('to-addr').value = '';
-    document.getElementById('send-amt').value = '';
-    document.getElementById('send-note').value = '';
-    pickedContact = null; renderContacts();
-    document.querySelectorAll('.qa').forEach(q => q.classList.remove('on'));
-    updateHistSummary();
-    toast(`${parseFloat(amt).toLocaleString()} ${sym} sent!`, 'tok');
-  } catch (e) { toast((e?.reason || e?.message || 'Failed').slice(0, 60), 'terr'); }
-  finally { btn.disabled = false; btn.textContent = 'Send →'; }
-}
-
-/* ═══════════════════════════════════════════
-   FAUCET
-═══════════════════════════════════════════ */
-async function claimFaucet() {
-  if (!userAddr) { toast('Connect your wallet first', 'terr'); return; }
-  if (faucetCD) { toast('Faucet cooldown active — wait 24h between claims', 'terr'); return; }
-
-  const btn = document.getElementById('faucet-btn');
-  btn.innerHTML = '<span style="animation:spin .7s linear infinite;display:inline-block">↻</span>';
-  btn.style.pointerEvents = 'none';
-
-  try {
-    // POST wallet address to faucet server
-    const res = await fetch('https://rialo-pay-faucet.onrender.com/api/faucet', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address: userAddr }),
-    });
-
-    if (res.ok) {
-      const data = await res.json().catch(() => ({}));
-      faucetCD = true;
-      setTimeout(() => { faucetCD = false; }, 86400000);
-      // Refresh balance after a short delay (tx needs to confirm)
-      setTimeout(() => fetchBalance(), 5000);
-      setTimeout(() => fetchBalance(), 12000);
-      toast('100 RLP requested! Balance will update shortly 🪙', 'tok');
-    } else {
-      // Try to parse error message
-      const err = await res.json().catch(() => ({ message: res.statusText }));
-      const msg = err?.message || err?.error || '';
-      if (msg.toLowerCase().includes('cooldown') || msg.toLowerCase().includes('24h') || res.status === 429) {
-        faucetCD = true;
-        toast('Faucet cooldown active — wait 24h', 'terr');
-      } else if (res.status === 404) {
-        // API endpoint not found — open faucet page with address pre-filled
-        window.open('https://rialo-pay-faucet.onrender.com/?address=' + encodeURIComponent(userAddr), '_blank');
-        toast('Opening faucet page…', 'tinfo');
-      } else {
-        toast(msg.slice(0, 70) || 'Faucet request failed', 'terr');
-      }
-    }
-  } catch (e) {
-    // Network error or CORS — open faucet page as fallback
-    console.warn('Faucet API error:', e);
-    window.open('https://rialo-pay-faucet.onrender.com/?address=' + encodeURIComponent(userAddr), '_blank');
-    toast('Opening faucet page — paste your address to claim', 'tinfo');
-  } finally {
-    btn.innerHTML = '🪙 Faucet';
-    btn.style.pointerEvents = 'auto';
-  }
-}
-
-/* ═══════════════════════════════════════════
-   HISTORY  (reads from Firebase)
-═══════════════════════════════════════════ */
-function renderHistory() {
-  const q = (document.getElementById('hist-q')?.value || '').toLowerCase();
-  let list = txs;
-  if (hFlt !== 'all') list = list.filter(t => t.dir === hFlt);
-  if (hPeriod !== 'all') {
-    const ms = parseInt(hPeriod) * 86400000;
-    list = list.filter(t => Date.now() - t.ts < ms);
-  }
-  if (q) list = list.filter(t =>
-    t.from?.toLowerCase().includes(q) || t.to?.toLowerCase().includes(q) ||
-    (t.note || '').toLowerCase().includes(q) ||
-    cName(t.from).toLowerCase().includes(q) || cName(t.to).toLowerCase().includes(q)
-  );
-
-  const el = document.getElementById('hist-rows');
-  if (!list.length) {
-    el.innerHTML = `<div class="tx-empty">
-      <div class="tx-empty-ic">📭</div>
-      <div class="tx-empty-t">${q ? 'No results' : 'No transactions yet'}</div>
-      <div class="tx-empty-s">${q ? 'Try a different search' : 'Transactions will appear here once you send or receive tokens'}</div>
-    </div>`;
+/* ════════════ HISTORY ════════════ */
+function renderHistory(){
+  const q=(document.getElementById('hist-q')?.value||'').toLowerCase();
+  let list=txs;
+  if (hFlt!=='all') list=list.filter(t=>t.dir===hFlt);
+  if (hPeriod!=='all'){ const ms=parseInt(hPeriod)*86400000; list=list.filter(t=>Date.now()-t.ts<ms); }
+  if (catFilter!=='all') list=list.filter(t=>t.category===catFilter);
+  if (q) list=list.filter(t=>t.from?.toLowerCase().includes(q)||t.to?.toLowerCase().includes(q)||(t.note||'').toLowerCase().includes(q)||cName(t.from).toLowerCase().includes(q)||cName(t.to).toLowerCase().includes(q)||(t.category||'').toLowerCase().includes(q));
+  const el=document.getElementById('hist-rows');
+  if (!list.length){
+    el.innerHTML=`<div class="tx-empty"><div class="tx-empty-ic">📭</div><div class="tx-empty-t">${q?'No results':'No transactions yet'}</div><div class="tx-empty-s">${q?'Try a different search':'Transactions will appear here'}</div></div>`;
     return;
   }
-
-  el.innerHTML = list.map(t => {
-    const isIn  = t.dir === 'in';
-    const other = isIn ? t.from : t.to;
-    const name  = cName(other) || short(other);
-    const amt   = parseFloat(t.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 4 });
+  el.innerHTML=list.map(t=>{
+    const isIn=t.dir==='in'; const other=isIn?t.from:t.to;
+    const name=cName(other)||short(other);
+    const amt=parseFloat(t.amount||0).toLocaleString('en-US',{maximumFractionDigits:4});
+    const cat=CATEGORIES.find(c=>c.id===t.category);
+    const catDisplay = (t.category==='other' && t.otherLabel) ? t.otherLabel : cat?.label;
+    const catTag=catDisplay?`<span class="tc-cat" style="background:${cat?.bg||'rgba(107,114,128,.1)'};color:${cat?.color||'#6B7280'}">${catDisplay}</span>`:'';
     return `<div class="tx-row">
       <div class="tc-from">
-        <div class="tx-ava ${t.dir}">${isIn ? '↓' : '↑'}</div>
+        <div class="tx-ava ${t.dir}">${isIn?'↓':'↑'}</div>
         <div>
-          <div class="tc-name">${isIn ? 'From ' : 'To '}<strong>${name}</strong></div>
-          ${t.note ? `<div class="tc-note">${t.note}</div>` : ''}
+          <div class="tc-name">${isIn?'From ':'To '}<strong>${name}</strong></div>
+          <div class="tc-meta">${t.note?`<span class="tc-note">${t.note}</span>`:''}${catTag}</div>
         </div>
       </div>
       <div class="tc-addr">${short(other)}</div>
       <div class="tc-time">${timeAgo(t.ts)}</div>
-      <div class="tc-amt ${t.dir}">${isIn ? '+' : '−'}${amt} ${sym}</div>
+      <div class="tc-amt ${t.dir}">${isIn?'+':'−'}${amt} ${sym}</div>
       <div class="tc-status">
-        <span class="st ${t.status === 'confirmed' ? 'st-ok' : t.status === 'pending' ? 'st-pnd' : 'st-fail'}">${t.status}</span>
-        ${t.hash && t.hash.length > 20 ? `<a class="tc-ext" href="${EXPLORER}/tx/${t.hash}" target="_blank">↗</a>` : ''}
+        <span class="st ${t.status==='confirmed'?'st-ok':t.status==='pending'?'st-pnd':'st-fail'}">${t.status}</span>
+        ${t.hash&&t.hash.length>20?`<a class="tc-ext" href="${EXPLORER}/tx/${t.hash}" target="_blank">↗</a>`:''}
       </div>
     </div>`;
   }).join('');
 }
-
-function updateHistSummary() {
-  const ins  = txs.filter(t => t.dir === 'in');
-  const outs = txs.filter(t => t.dir === 'out');
-  const tIn  = ins.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
-  const tOut = outs.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
-  const net  = tIn - tOut;
-  const maxTx = txs.reduce((m, t) => parseFloat(t.amount||0) > parseFloat(m?.amount||0) ? t : m, null);
-  const fmt  = v => v.toLocaleString('en-US', { maximumFractionDigits: 2 });
-  setEl('hs-in',   fmt(tIn));  setEl('hs-in-sub',  `${ins.length} payment${ins.length  !== 1 ? 's' : ''}`);
-  setEl('hs-out',  fmt(tOut)); setEl('hs-out-sub', `${outs.length} payment${outs.length !== 1 ? 's' : ''}`);
-  setEl('hs-net',  (net >= 0 ? '+' : '') + fmt(net));
-  if (maxTx) { setEl('hs-max', parseFloat(maxTx.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })); setEl('hs-max-sub', timeAgo(maxTx.ts)); }
+function updateHistSummary(){
+  const ins=txs.filter(t=>t.dir==='in'); const outs=txs.filter(t=>t.dir==='out');
+  const tIn=ins.reduce((s,t)=>s+parseFloat(t.amount||0),0);
+  const tOut=outs.reduce((s,t)=>s+parseFloat(t.amount||0),0);
+  const net=tIn-tOut;
+  const maxTx=txs.reduce((m,t)=>parseFloat(t.amount||0)>parseFloat(m?.amount||0)?t:m,null);
+  setEl('hs-in',fmt(tIn)); setEl('hs-in-sub',`${ins.length} payment${ins.length!==1?'s':''}`);
+  setEl('hs-out',fmt(tOut)); setEl('hs-out-sub',`${outs.length} payment${outs.length!==1?'s':''}`);
+  setEl('hs-net',(net>=0?'+':'')+fmt(net));
+  if(maxTx){ setEl('hs-max',parseFloat(maxTx.amount||0).toLocaleString('en-US',{maximumFractionDigits:2})); setEl('hs-max-sub',timeAgo(maxTx.ts)); }
+}
+function setHFlt(btn,f){ hFlt=f; document.querySelectorAll('.hf').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); renderHistory(); }
+function setHPeriod(btn,p){ hPeriod=p; const g=document.querySelectorAll('.hf-group'); if(g[1]) g[1].querySelectorAll('.hf').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); renderHistory(); }
+async function refreshHist(){ toast('Refreshing…','tinfo'); await loadTxsFromFirebase(); toast('History updated','tok'); }
+function exportCSV(){
+  if (!txs.length){ toast('No transactions to export','terr'); return; }
+  const rows=[['Hash','Direction','From','To','Amount','Symbol','Category','Status','Date','Note']];
+  txs.forEach(t=>rows.push([t.hash||'',t.dir,t.from||'',t.to||'',t.amount||'',sym,t.category||'',t.status,new Date(t.ts).toISOString(),t.note||'']));
+  const csv=rows.map(r=>r.map(v=>'"'+v+'"').join(',')).join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='rialopay-history.csv'; a.click();
+  toast('CSV exported!','tok');
 }
 
-function setHFlt(btn, f) {
-  hFlt = f;
-  document.querySelectorAll('.hf').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on'); renderHistory();
-}
-function setHPeriod(btn, p) {
-  hPeriod = p;
-  const groups = document.querySelectorAll('.hf-group');
-  if (groups[1]) groups[1].querySelectorAll('.hf').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on'); renderHistory();
+/* ════════════ CHART ════════════ */
+let chartInstance=null;
+function renderChart(){
+  const canvas=document.getElementById('balance-chart');
+  const empty=document.getElementById('chart-empty');
+  if (!txs.length){ canvas.style.display='none'; empty.style.display='flex'; return; }
+  canvas.style.display='block'; empty.style.display='none';
+
+  const days=30; const labels=[]; const inData=[]; const outData=[];
+  for (let i=days-1;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
+    const dayEnd=new Date(d); dayEnd.setHours(23,59,59,999);
+    const dayIn=txs.filter(t=>t.dir==='in'&&t.ts>=d.getTime()&&t.ts<=dayEnd.getTime()).reduce((s,t)=>s+parseFloat(t.amount||0),0);
+    const dayOut=txs.filter(t=>t.dir==='out'&&t.ts>=d.getTime()&&t.ts<=dayEnd.getTime()).reduce((s,t)=>s+parseFloat(t.amount||0),0);
+    labels.push(d.getDate()+'/'+( d.getMonth()+1));
+    inData.push(dayIn); outData.push(dayOut);
+  }
+
+  const ctx=canvas.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.offsetWidth||600; const H=140;
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  ctx.scale(dpr,dpr);
+
+  const isDarkMode=document.documentElement.getAttribute('data-theme')==='dark';
+  const tealColor=isDarkMode?'#2DD4AA':'#1B6B58';
+  const redColor=isDarkMode?'#F87171':'#991B1B';
+  const gridColor=isDarkMode?'rgba(255,255,255,.06)':'rgba(0,0,0,.05)';
+  const labelColor=isDarkMode?'rgba(255,255,255,.3)':'rgba(0,0,0,.3)';
+
+  const maxVal=Math.max(...inData,...outData,1);
+  const pad={l:10,r:10,t:10,b:28};
+  const cW=W-pad.l-pad.r; const cH=H-pad.t-pad.b;
+  const n=labels.length;
+
+  ctx.strokeStyle=gridColor; ctx.lineWidth=1;
+  for (let g=0;g<=3;g++){
+    const y=pad.t+cH-(g/3)*cH; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+  }
+
+  const barW=Math.max(2,cW/n-2);
+  for (let i=0;i<n;i++){
+    const x=pad.l+(i/(n-1||1))*cW;
+    if (inData[i]>0){
+      const bH=(inData[i]/maxVal)*cH;
+      ctx.fillStyle=tealColor+'66';
+      ctx.fillRect(x-barW/2,pad.t+cH-bH,barW,bH);
+    }
+    if (outData[i]>0){
+      const bH=(outData[i]/maxVal)*cH;
+      ctx.fillStyle=redColor+'55';
+      ctx.fillRect(x-barW/2,pad.t+cH-bH,barW/2,bH);
+    }
+  }
+
+  ctx.strokeStyle=tealColor; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.shadowColor=tealColor; ctx.shadowBlur=6;
+  ctx.beginPath();
+  for (let i=0;i<n;i++){
+    const x=pad.l+(i/(n-1||1))*cW;
+    const y=pad.t+cH-(inData[i]/maxVal)*cH;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.stroke(); ctx.shadowBlur=0;
+
+  ctx.fillStyle=labelColor; ctx.font=`9px 'DM Mono',monospace`; ctx.textAlign='center';
+  for (let i=0;i<n;i+=5){
+    const x=pad.l+(i/(n-1||1))*cW;
+    ctx.fillText(labels[i],x,H-6);
+  }
 }
 
-async function refreshHist() {
-  toast('Refreshing from Firebase…', 'tinfo');
-  await loadTxsFromFirebase();
-  toast('History updated', 'tok');
+/* ════════════ FAUCET ════════════ */
+async function claimFaucet(){
+  if (!userAddr){ toast('Connect wallet first','terr'); return; }
+  if (faucetCD){ toast('Faucet cooldown — wait 24h','terr'); return; }
+  const btn=document.getElementById('faucet-btn');
+  btn.innerHTML='<span style="animation:spin .7s linear infinite;display:inline-block">↻</span>';
+  btn.style.pointerEvents='none';
+  try {
+    const res=await fetch('https://rialo-pay-faucet.onrender.com/api/faucet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:userAddr})});
+    if (res.ok){ faucetCD=true; setTimeout(()=>{faucetCD=false;},86400000); setTimeout(()=>fetchBalance(),5000); setTimeout(()=>fetchBalance(),12000); toast('100 RLP requested! 🪙','tok'); }
+    else {
+      const err=await res.json().catch(()=>({})); const msg=err?.message||err?.error||'';
+      if (msg.toLowerCase().includes('cooldown')||res.status===429){ faucetCD=true; toast('Faucet cooldown active','terr'); }
+      else if (res.status===404){ window.open('https://rialo-pay-faucet.onrender.com/?address='+encodeURIComponent(userAddr),'_blank'); toast('Opening faucet page…','tinfo'); }
+      else { toast(msg.slice(0,70)||'Faucet failed','terr'); }
+    }
+  } catch(e){ window.open('https://rialo-pay-faucet.onrender.com/?address='+encodeURIComponent(userAddr),'_blank'); toast('Opening faucet page','tinfo'); }
+  finally { btn.innerHTML='🪙 Faucet'; btn.style.pointerEvents='auto'; }
 }
 
-function exportCSV() {
-  if (!txs.length) { toast('No transactions to export', 'terr'); return; }
-  const rows = [['Hash','Direction','From','To','Amount','Symbol','Status','Date','Note']];
-  txs.forEach(t => rows.push([
-    t.hash||'', t.dir, t.from||'', t.to||'', t.amount||'', sym,
-    t.status, new Date(t.ts).toISOString(), t.note||''
-  ]));
-  const csv  = rows.map(r => r.map(v => '"' + v + '"').join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a'); a.href = url; a.download = 'rialopay-history.csv'; a.click();
-  toast('CSV exported!', 'tok');
-}
-
-/* ═══════════════════════════════════════════
-   PAYMENT REQUEST LINK
-═══════════════════════════════════════════ */
-function genLink() {
+/* ════════════ REQUEST LINK ════════════ */
+function genLink(){
   if (!userAddr) return;
-  const amt  = document.getElementById('req-amt').value.trim();
-  const note = document.getElementById('req-note').value.trim();
-  const due  = document.getElementById('req-due').value;
-  let url = `${location.origin}${location.pathname}?to=${userAddr}`;
-  if (amt)  url += `&amount=${encodeURIComponent(amt)}`;
-  if (note) url += `&note=${encodeURIComponent(note)}`;
-  if (due)  url += `&due=${encodeURIComponent(due)}`;
-  genLinkStr = url;
-  const box = document.getElementById('pay-link');
-  document.getElementById('pay-link-text').textContent = url;
-  box.classList.add('show');
-  toast('Payment link ready!', 'tok');
+  const amt=document.getElementById('req-amt').value.trim();
+  const note=document.getElementById('req-note').value.trim();
+  const due=document.getElementById('req-due').value;
+  let url=`${location.origin}${location.pathname}?to=${userAddr}`;
+  if (amt) url+=`&amount=${encodeURIComponent(amt)}`;
+  if (note) url+=`&note=${encodeURIComponent(note)}`;
+  if (due) url+=`&due=${encodeURIComponent(due)}`;
+  genLinkStr=url;
+  document.getElementById('pay-link-text').textContent=url;
+  document.getElementById('pay-link').classList.add('show');
+  toast('Payment link ready!','tok');
 }
-function copyLink() { navigator.clipboard.writeText(genLinkStr).then(() => toast('Link copied!', 'tok')); }
+function copyLink(){ navigator.clipboard.writeText(genLinkStr).then(()=>toast('Link copied!','tok')); }
 
-/* ═══════════════════════════════════════════
-   RECURRING
-═══════════════════════════════════════════ */
-function pickFreq(btn, f) {
-  recFreq = f;
-  document.querySelectorAll('.rec-freq').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-}
-function scheduleRecurring() {
-  const to    = document.getElementById('rec-to').value.trim();
-  const amt   = document.getElementById('rec-amt').value.trim();
-  const start = document.getElementById('rec-start').value;
-  const note  = document.getElementById('rec-note').value.trim();
-  if (!to || !amt || !start) { toast('Fill in recipient, amount and start date', 'terr'); return; }
-  if (!ethers.isAddress(to)) { toast('Invalid recipient address', 'terr'); return; }
-  const colors = ['#7C3AED','#1D4ED8','#1B6B58','#B45309'];
-  recurring.unshift({ id: Date.now(), to, amount: amt, freq: recFreq, start, note, status: 'active', created: Date.now() });
+/* ════════════ RECURRING ════════════ */
+function pickFreq(btn,f){ recFreq=f; document.querySelectorAll('.rec-freq').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); }
+function scheduleRecurring(){
+  const to=document.getElementById('rec-to').value.trim();
+  const amt=document.getElementById('rec-amt').value.trim();
+  const start=document.getElementById('rec-start').value;
+  const note=document.getElementById('rec-note2').value.trim();
+  if (!to||!amt||!start){ toast('Fill in recipient, amount and start date','terr'); return; }
+  if (!ethers.isAddress(to)){ toast('Invalid address','terr'); return; }
+  recurring.unshift({id:Date.now(),to,amount:amt,freq:recFreq,start,note,status:'active',created:Date.now()});
   saveRecurring(); renderRecurring();
-  document.getElementById('rec-to').value  = '';
-  document.getElementById('rec-amt').value = '';
-  document.getElementById('rec-note').value = '';
-  toast(`Recurring ${recFreq} payment scheduled!`, 'tok');
+  document.getElementById('rec-to').value=''; document.getElementById('rec-amt').value=''; document.getElementById('rec-note2').value='';
+  toast(`Recurring ${recFreq} payment scheduled!`,'tok');
 }
-function renderRecurring() {
-  const el = document.getElementById('rec-list');
-  if (!recurring.length) { el.innerHTML = ''; return; }
-  el.innerHTML = recurring.slice(0, 5).map(r => `
+function renderRecurring(){
+  const el=document.getElementById('rec-list'); if (!recurring.length){ el.innerHTML=''; return; }
+  el.innerHTML=recurring.slice(0,5).map(r=>`
     <div style="display:flex;align-items:center;gap:10px;padding:10px 13px;border-radius:var(--r);background:var(--card2);border:1px solid var(--border)">
       <div style="width:28px;height:28px;border-radius:50%;background:var(--teal-dim);color:var(--teal);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">🔁</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:12.5px;font-weight:500">${parseFloat(r.amount).toLocaleString()} ${sym} → ${short(r.to)}</div>
-        <div style="font-family:var(--ff-m);font-size:10px;color:var(--ink4);margin-top:2px">${r.freq} · ${r.note || 'No note'}</div>
+        <div style="font-family:var(--ff-m);font-size:10px;color:var(--ink4);margin-top:2px">${r.freq} · ${r.note||'No note'}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-family:var(--ff-m);font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(27,107,88,.09);color:var(--teal);border:1px solid rgba(27,107,88,.18)">${r.status}</span>
@@ -1291,53 +1676,292 @@ function renderRecurring() {
       </div>
     </div>`).join('');
 }
-function cancelRecurring(id) {
-  recurring = recurring.map(r => r.id == id ? { ...r, status: 'cancelled' } : r);
-  saveRecurring(); renderRecurring(); toast('Recurring payment cancelled', 'tok');
-}
+function cancelRecurring(id){ recurring=recurring.map(r=>r.id==id?{...r,status:'cancelled'}:r); saveRecurring(); renderRecurring(); toast('Recurring payment cancelled','tok'); }
 
-/* ═══════════════════════════════════════════
-   QR / MODALS
-═══════════════════════════════════════════ */
-function buildQR(id, data, size) {
-  const el = document.getElementById(id); if (!el) return; el.innerHTML = '';
-  try { new QRCode(el, { text: data, width: size, height: size, colorDark: '#141210', colorLight: '#FFFFFF', correctLevel: QRCode.CorrectLevel.M }); }
-  catch (e) { el.innerHTML = `<p style="font-family:var(--ff-m);font-size:10px;color:var(--ink3);word-break:break-all">${data}</p>`; }
+/* ════════════ QR / MODALS ════════════ */
+function buildQR(id,data,size){
+  const el=document.getElementById(id); if(!el) return; el.innerHTML='';
+  try{ new QRCode(el,{text:data,width:size,height:size,colorDark:'#141210',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M}); }
+  catch(e){ el.innerHTML=`<p style="font-family:var(--ff-m);font-size:10px;color:var(--ink3);word-break:break-all">${data}</p>`; }
 }
-function openShareModal() { document.getElementById('share-modal').style.display = 'block'; }
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function openShareModal(){ document.getElementById('share-modal').style.display='block'; }
+function closeModal(id){ document.getElementById(id).style.display='none'; }
 
-/* ═══════════════════════════════════════════
-   UI HELPERS
-═══════════════════════════════════════════ */
-function switchRTab(btn, id) {
-  document.querySelectorAll('.r-tab').forEach(b => b.classList.remove('on'));
-  document.querySelectorAll('.rtab-body').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on'); document.getElementById(id).classList.add('on');
+/* ════════════ UI HELPERS ════════════ */
+function switchRTab(btn,id){ document.querySelectorAll('.r-tab').forEach(b=>b.classList.remove('on')); document.querySelectorAll('.rtab-body').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); document.getElementById(id).classList.add('on'); }
+function pickQA(el,v){ document.querySelectorAll('.qa').forEach(q=>q.classList.remove('on')); el.classList.add('on'); document.getElementById('send-amt').value=v; updateSimulation(); }
+function clearQA(){ document.querySelectorAll('.qa').forEach(q=>q.classList.remove('on')); }
+function copyAddr(){ if(!userAddr) return; navigator.clipboard.writeText(userAddr).then(()=>toast('Address copied!','tok')); }
+function cName(a){ return contacts.find(c=>c.addr?.toLowerCase()===a?.toLowerCase())?.name||''; }
+function setEl(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; }
+function short(a){ return a?.length>12?a.slice(0,6)+'…'+a.slice(-4):a||'—'; }
+function fmt(v){ return v.toLocaleString('en-US',{maximumFractionDigits:2}); }
+function timeAgo(ts){
+  if(!ts) return '—'; const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60) return 'Just now'; if(s<3600) return Math.floor(s/60)+'m ago';
+  if(s<86400) return Math.floor(s/3600)+'h ago'; return Math.floor(s/86400)+'d ago';
 }
-function pickQA(el, v) { document.querySelectorAll('.qa').forEach(q => q.classList.remove('on')); el.classList.add('on'); document.getElementById('send-amt').value = v; }
-function clearQA() { document.querySelectorAll('.qa').forEach(q => q.classList.remove('on')); }
-function copyAddr() { if (!userAddr) return; navigator.clipboard.writeText(userAddr).then(() => toast('Address copied!', 'tok')); }
-function cName(a) { return contacts.find(c => c.addr?.toLowerCase() === a?.toLowerCase())?.name || ''; }
-function setEl(id, v) { const e = document.getElementById(id); if (e) e.textContent = v; }
-function short(a) { return a?.length > 12 ? a.slice(0, 6) + '…' + a.slice(-4) : a || '—'; }
-function timeAgo(ts) {
-  if (!ts) return '—';
-  const s = Math.floor((Date.now() - ts) / 1000);
-  if (s < 60) return 'Just now';
-  if (s < 3600) return Math.floor(s / 60) + 'm ago';
-  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
-  return Math.floor(s / 86400) + 'd ago';
-}
-function toast(msg, type = 'tinfo') {
-  const icons = { tok: '✓', terr: '✕', tinfo: '↗' };
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.innerHTML = `<span class="ti">${icons[type] || '↗'}</span><span class="tm">${msg}</span>`;
+function toast(msg,type='tinfo'){
+  const icons={tok:'✓',terr:'✕',tinfo:'↗'};
+  const el=document.createElement('div'); el.className=`toast ${type}`;
+  el.innerHTML=`<span class="ti">${icons[type]||'↗'}</span><span class="tm">${msg}</span>`;
   document.getElementById('toasts').appendChild(el);
-  setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(10px)'; el.style.transition = 'all .3s'; setTimeout(() => el.remove(), 320); }, type === 'tinfo' ? 2200 : 3200);
+  setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(10px)';el.style.transition='all .3s';setTimeout(()=>el.remove(),320);},type==='tinfo'?2200:3200);
+}
+
+window.addEventListener('resize',()=>{ if (document.getElementById('pg-history')?.classList.contains('on')) renderChart(); });
+
+/* ════════════ USD PRICE FEED ════════════ */
+async function fetchRLPPrice() {
+  // RLP is a testnet token with no real market price.
+  // We fetch ETH/USD from CoinGecko and use a fixed RLP/ETH mock ratio.
+  // This gives the USD field a realistic-looking number tied to real market data.
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd',{cache:'no-store'});
+    if (!res.ok) return;
+    const d = await res.json();
+    const ethUsd = d?.ethereum?.usd;
+    if (ethUsd) {
+      // 1 RLP = 0.000050 ETH (mock peg) → gives ~$0.09–$0.12 per RLP
+      rlpUsdRate = ethUsd * 0.000050;
+      // Refresh USD display if balance is loaded
+      if (currentBalanceNum > 0) showBalance(currentBalanceNum.toLocaleString('en-US',{maximumFractionDigits:2}));
+    }
+  } catch(e){ /* silent — not critical */ }
+}
+
+/* ════════════ GAS TRACKER ════════════ */
+let gasExpanded = false;
+function toggleGasExpand() {
+  gasExpanded = !gasExpanded;
+  document.getElementById('gas-expanded').classList.toggle('open', gasExpanded);
+}
+async function fetchGasPrice() {
+  if (!provider) return;
+  try {
+    const feeData = await provider.getFeeData();
+    const baseFee = feeData.gasPrice ? Number(ethers.formatUnits(feeData.gasPrice,'gwei')) : null;
+    if (baseFee === null) return;
+    const slow = baseFee * 1.0;
+    const std  = baseFee * 1.2;
+    const fast = baseFee * 1.5;
+    const fmt2 = v => v.toFixed(3) + ' gwei';
+    setEl('gas-slow',  fmt2(slow));
+    setEl('gas-std',   fmt2(std));
+    setEl('gas-fast',  fmt2(fast));
+    setEl('gas-pill-std', std.toFixed(3) + ' gwei');
+    // Block number
+    try { const bn = await provider.getBlockNumber(); setEl('gas-block','#'+bn.toLocaleString()); } catch{}
+    setEl('gas-updated', new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'}));
+  } catch(e){ setEl('gas-pill-std','— gwei'); }
+}
+
+/* ════════════ INCOMING PAYMENT POLLER ════════════ */
+function startIncomingPoller() {
+  // Seed known hashes from already-loaded txs so we don't false-positive on startup
+  txs.forEach(t => { if(t.hash) knownTxHashes.add(t.hash); });
+  clearInterval(incomingTimer);
+  incomingTimer = setInterval(pollIncoming, 20000);
+}
+async function pollIncoming() {
+  if (!userAddr) return;
+  try {
+    const fresh = await fbRead(userAddr);
+    const newIncoming = fresh.filter(t => 
+      t.dir === 'in' && t.hash && !knownTxHashes.has(t.hash)
+    );
+    newIncoming.forEach(t => {
+      knownTxHashes.add(t.hash);
+      const fromName = cName(t.from) || short(t.from);
+      const amt = parseFloat(t.amount||0).toLocaleString('en-US',{maximumFractionDigits:4});
+      // Toast notification
+      toast(`↓ Received ${amt} ${sym} from ${fromName}`,'tok');
+      // Browser notification if permission granted
+      if (Notification.permission === 'granted') {
+        new Notification('RialoPay — Payment received', {
+          body: `+${amt} ${sym} from ${fromName}`,
+          icon: '',
+        });
+      }
+      // Add to txs array and refresh
+      if (!txs.find(x => x.hash === t.hash)) {
+        txs.unshift(t); updateHistSummary(); renderMonthlySummary();
+      }
+    });
+    // Request browser notification permission if not yet asked
+    if (newIncoming.length && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    // Silently update balance if we got something new
+    if (newIncoming.length) { fetchBalance(); }
+  } catch(e){ /* silent */ }
+}
+
+/* ════════════ BATCH SEND ════════════ */
+function buildBatchCatGrid() {
+  const el = document.getElementById('batch-cat-grid'); if(!el) return;
+  el.innerHTML = CATEGORIES.map(c=>`<div class="cat-chip" data-bcid="${c.id}" onclick="pickBatchCat(this,'${c.id}')">${c.label}</div>`).join('');
+}
+function pickBatchCat(el, id) {
+  document.querySelectorAll('[data-bcid]').forEach(c=>c.classList.remove('on'));
+  batchCat = batchCat === id ? '' : id;
+  if (batchCat) el.classList.add('on');
+}
+function addBatchRow(addr='', amt='') {
+  batchRows.push({ id: Date.now()+Math.random(), addr, amt });
+  renderBatchRows();
+}
+function removeBatchRow(id) {
+  batchRows = batchRows.filter(r => r.id !== id);
+  renderBatchRows();
+}
+function renderBatchRows() {
+  const el = document.getElementById('batch-rows'); if (!el) return;
+  if (!batchRows.length) { el.innerHTML=''; updateBatchTotal(); return; }
+  el.innerHTML = batchRows.map((r,i) => `
+    <div class="batch-recipient-row">
+      <span class="batch-idx">${i+1}</span>
+      <input class="batch-inp-addr" placeholder="0x… address" value="${r.addr}"
+        oninput="batchRows[${i}].addr=this.value;updateBatchTotal()"
+        list="batch-contacts-dl"/>
+      <input class="batch-inp-amt" type="number" placeholder="Amount" value="${r.amt||''}" min="0" step="any"
+        oninput="batchRows[${i}].amt=this.value;updateBatchTotal()"/>
+      <button class="batch-remove" onclick="removeBatchRow(${r.id})" title="Remove">✕</button>
+    </div>`).join('') +
+    `<datalist id="batch-contacts-dl">${contacts.map(c=>`<option value="${c.addr}">${c.name}</option>`).join('')}</datalist>`;
+  updateBatchTotal();
+}
+function updateBatchTotal() {
+  const total = batchRows.reduce((s,r)=>s+parseFloat(r.amt||0),0);
+  const valid  = batchRows.filter(r=>r.addr&&ethers.isAddress(r.addr)&&parseFloat(r.amt||0)>0);
+  const lbl = document.getElementById('batch-total-label');
+  if (lbl) lbl.textContent = total > 0 ? `Total: ${total.toLocaleString('en-US',{maximumFractionDigits:4})} ${sym}` : '';
+  const btn = document.getElementById('batch-send-btn');
+  if (btn) { btn.disabled = valid.length === 0; btn.style.opacity = valid.length ? '1' : '.4'; }
+}
+function openBatchContactPicker() {
+  // Prefill batch rows from contacts with empty amounts
+  contacts.forEach(c => {
+    if (!batchRows.find(r=>r.addr===c.addr)) {
+      batchRows.push({ id: Date.now()+Math.random(), addr: c.addr, amt: '' });
+    }
+  });
+  renderBatchRows();
+  toast('Contacts added — fill in amounts','tinfo');
+}
+async function sendBatchPayments() {
+  if (!wc) { toast('Wallet not connected','terr'); return; }
+  const valid = batchRows.filter(r => r.addr && ethers.isAddress(r.addr) && parseFloat(r.amt||0) > 0);
+  if (!valid.length) { toast('Add at least one valid recipient with an amount','terr'); return; }
+  const note  = document.getElementById('batch-note').value.trim();
+  const btn   = document.getElementById('batch-send-btn');
+  const progEl= document.getElementById('batch-progress');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  progEl.innerHTML = '';
+  for (let i = 0; i < valid.length; i++) {
+    const r = valid[i];
+    const div = document.createElement('div');
+    div.className = 'batch-prog-row';
+    div.innerHTML = `<span style="animation:spin .7s linear infinite;display:inline-block">↻</span> <span>${i+1}/${valid.length} → ${cName(r.addr)||short(r.addr)}</span>`;
+    progEl.appendChild(div);
+    try {
+      const wei = ethers.parseUnits(parseFloat(r.amt).toString(), dec);
+      const tx  = await wc.transfer(r.addr, wei);
+      await tx.wait();
+      const record = { hash:tx.hash, from:userAddr, to:r.addr, amount:r.amt, dir:'out', status:'confirmed', ts:Date.now(), note, category:batchCat };
+      const k = await fbWrite(record); if(k) record.fbKey=k; txs.unshift(record);
+      div.innerHTML = `<span style="color:var(--teal)">✓</span> <span>${r.amt} ${sym} → ${cName(r.addr)||short(r.addr)}</span>`;
+    } catch(e) {
+      div.innerHTML = `<span style="color:var(--red)">✕</span> <span>Failed: ${cName(r.addr)||short(r.addr)} — ${(e?.reason||'Error').slice(0,36)}</span>`;
+    }
+  }
+  await fetchBalance(); updateHistSummary(); renderMonthlySummary();
+  toast(`Batch complete — ${valid.length} payments sent`,'tok');
+  btn.disabled = false; btn.textContent = 'Send All →';
+  batchRows = []; addBatchRow(); addBatchRow();
+  document.getElementById('batch-note').value = '';
+}
+
+/* ════════════ RECEIPT ════════════ */
+let currentReceipt = null;
+
+function showReceipt(tx) {
+  currentReceipt = tx;
+  const receiptId = tx.receiptId || ('RP-' + Math.random().toString(36).slice(2,10).toUpperCase());
+  currentReceipt.receiptId = receiptId;
+
+  const date = new Date(tx.ts);
+  const dateStr = date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}) + ' · ' + date.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  const toName = cName(tx.to);
+
+  document.getElementById('receipt-date').textContent = dateStr;
+  document.getElementById('receipt-amount').textContent = parseFloat(tx.amount).toLocaleString('en-US',{maximumFractionDigits:4});
+  document.getElementById('receipt-sym-disp').textContent = sym;
+  document.getElementById('receipt-id').textContent = 'Receipt · ' + receiptId;
+
+  const rows = [
+    ['To',      toName ? `${toName} · ${short(tx.to)}` : short(tx.to)],
+    ['From',    short(tx.from)],
+    ['Network', 'Base Sepolia'],
+    ['Tx Hash', tx.hash && tx.hash.length > 20 ? short(tx.hash) : (tx.hash || 'Pending')],
+    ['Status',  '✓ Confirmed'],
+  ];
+  if (tx.category){ const c=CATEGORIES.find(x=>x.id===tx.category); if(c) rows.push(['Category', c.label]); }
+  if (tx.note) rows.push(['Note', tx.note]);
+
+  document.getElementById('receipt-details').innerHTML = rows.map(([label, val]) => `
+    <div class="receipt-row">
+      <span class="receipt-row-label">${label}</span>
+      <span class="receipt-row-val${label==='Status'?' ok':''}">${val}</span>
+    </div>`).join('');
+
+  const ring = document.querySelector('.receipt-check-ring');
+  if (ring){ ring.style.animation='none'; void ring.offsetWidth; ring.style.animation='receiptPop .55s cubic-bezier(.22,1,.36,1) .1s both'; }
+
+  document.getElementById('receipt-modal').style.display = 'block';
+}
+
+async function downloadReceiptPNG() {
+  const el = document.getElementById('receipt-card');
+  if (!el) return;
+  const btn = document.getElementById('receipt-dl-btn');
+  btn.textContent = '↻ …'; btn.disabled = true;
+  try {
+    if (typeof html2canvas === 'undefined'){ toast('Renderer not ready — try again','terr'); return; }
+    const canvas = await html2canvas(el, {
+      backgroundColor: '#FAFAF7', scale: 2.5, useCORS: true, logging: false,
+    });
+    const a = document.createElement('a');
+    a.download = `rialopay-${currentReceipt?.receiptId || 'receipt'}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+    toast('Receipt saved! 🧾','tok');
+  } catch(e){ toast('PNG failed — screenshot it instead','terr'); console.error(e); }
+  finally { btn.textContent = '⬇ PNG'; btn.disabled = false; }
+}
+
+function copyReceiptText() {
+  if (!currentReceipt) return;
+  const toName = cName(currentReceipt.to);
+  const cat = currentReceipt.category ? CATEGORIES.find(c=>c.id===currentReceipt.category)?.label : null;
+  const lines = [
+    '━━━━━━━━━━━━━━━━━━━━━━━',
+    '   ✓  RIALOPAY RECEIPT',
+    '━━━━━━━━━━━━━━━━━━━━━━━',
+    `Amount   ${parseFloat(currentReceipt.amount).toLocaleString('en-US',{maximumFractionDigits:4})} ${sym}`,
+    `To       ${toName ? toName + ' · ' : ''}${currentReceipt.to}`,
+    `From     ${currentReceipt.from}`,
+    `Network  Base Sepolia`,
+    `Date     ${new Date(currentReceipt.ts).toLocaleString()}`,
+    `Tx       ${currentReceipt.hash || '—'}`,
+    `Status   Confirmed`,
+    cat ? `Category ${cat}` : '',
+    currentReceipt.note ? `Note     ${currentReceipt.note}` : '',
+    '━━━━━━━━━━━━━━━━━━━━━━━',
+    `Receipt  ${currentReceipt.receiptId}`,
+  ].filter(Boolean).join('\n');
+  navigator.clipboard.writeText(lines).then(()=>toast('Receipt copied!','tok'));
 }
 </script>
-
 </body>
 </html>
